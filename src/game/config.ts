@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { sceneRegistry } from '../scenes/sceneRegistry';
 
 export const gameConfig: Phaser.Types.Core.GameConfig = {
   type: Phaser.WEBGL,
@@ -15,5 +16,5 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
     antialiasGL: true,
     powerPreference: 'high-performance'
   },
-  scene: []
+  scene: sceneRegistry.map((item) => item.scene)
 };
