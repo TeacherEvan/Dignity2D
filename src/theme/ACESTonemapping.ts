@@ -1,4 +1,22 @@
-import Phaser from 'phaser';
+import Phaser from "phaser";
+
+const PostFXPipelineBase = (
+  Phaser as unknown as {
+    Renderer: {
+      WebGL: {
+        Pipelines: {
+          PostFXPipeline: new (config: {
+            game: Phaser.Game;
+            name: string;
+            fragShader: string;
+          }) => {
+            set1f(name: string, value: number): void;
+          };
+        };
+      };
+    };
+  }
+).Renderer.WebGL.Pipelines.PostFXPipeline;
 
 export function acesFilm(x: number): number {
   const a = 2.51;
@@ -27,13 +45,13 @@ vec3 ACESFilm(vec3 x) {
 void main() {
   vec4 color = texture2D(uMainSampler, outTexCoord);
   gl_FragColor = vec4(ACESFilm(color.rgb * exposure), color.a);
-}`;
+`;
 
-export class ACESTonemapping extends Phaser.Renderer.WebGL.Pipelines.PostFXPipeline {
+export class ACESTonemapping extends PostFXPipelineBase {
   private exposure = 1.25;
 
   constructor(game: Phaser.Game) {
-    super({ game, name: 'ACESTonemapping', fragShader: ACES_FRAG });
+    super({ game, name: "ACESTonemapping", fragShader: ACES_FRAG });
   }
 
   setExposure(value: number): void {
@@ -41,6 +59,6 @@ export class ACESTonemapping extends Phaser.Renderer.WebGL.Pipelines.PostFXPipel
   }
 
   onPreRender(): void {
-    this.set1f('exposure', this.exposure);
+    this.set1f("exposure", this.exposure);
   }
 }

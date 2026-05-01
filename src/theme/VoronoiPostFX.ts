@@ -1,4 +1,22 @@
-import Phaser from 'phaser';
+import Phaser from "phaser";
+
+const PostFXPipelineBase = (
+  Phaser as unknown as {
+    Renderer: {
+      WebGL: {
+        Pipelines: {
+          PostFXPipeline: new (config: {
+            game: Phaser.Game;
+            name: string;
+            fragShader: string;
+          }) => {
+            set1f(name: string, value: number): void;
+          };
+        };
+      };
+    };
+  }
+).Renderer.WebGL.Pipelines.PostFXPipeline;
 
 export const VORONOI_FRAG = `
 precision mediump float;
@@ -30,17 +48,17 @@ void main() {
   vec3 glyph = mix(gold, cyan, sin(time * 0.3) * 0.5 + 0.5) * edge * 0.25;
   vec4 scene = texture2D(uMainSampler, outTexCoord);
   gl_FragColor = vec4(scene.rgb + glyph, scene.a);
-}`;
+`;
 
-export class VoronoiPostFX extends Phaser.Renderer.WebGL.Pipelines.PostFXPipeline {
+export class VoronoiPostFX extends PostFXPipelineBase {
   private elapsed = 0;
 
   constructor(game: Phaser.Game) {
-    super({ game, name: 'VoronoiPostFX', fragShader: VORONOI_FRAG });
+    super({ game, name: "VoronoiPostFX", fragShader: VORONOI_FRAG });
   }
 
   onPreRender(): void {
     this.elapsed += 0.016;
-    this.set1f('time', this.elapsed);
+    this.set1f("time", this.elapsed);
   }
 }

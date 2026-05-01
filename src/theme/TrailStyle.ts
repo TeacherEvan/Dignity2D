@@ -1,4 +1,4 @@
-import { PALETTE } from './palette';
+import { PALETTE } from "./palette";
 
 export type TrailStyle = {
   primary: number;
@@ -14,6 +14,6 @@ export function createTrailStyle(reducedEffects: boolean): TrailStyle {
     partner: PALETTE.CYAN,
     width: 5,
     glowRadius: reducedEffects ? 0 : 0.005,
-    useShader: !reducedEffects
+    useShader: !reducedEffects,
   };
 }

@@ -1,4 +1,4 @@
-import type { Point } from '../game/types';
+import type { Point } from "../game/types";
 
 export function normalizeJoystickVector(vector: Point): Point {
   const length = Math.hypot(vector.x, vector.y);

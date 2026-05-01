@@ -15,8 +15,12 @@ export type PerformanceProfile = {
   enableTrailShader: boolean;
 };
 
-export function choosePerformanceProfile(input: PerformanceInput): PerformanceProfile {
-  const slowRenderer = /PowerVR\s*SGX\s*5[0-4]|Adreno\s*3[0-9]{2}/i.test(input.renderer);
+export function choosePerformanceProfile(
+  input: PerformanceInput,
+): PerformanceProfile {
+  const slowRenderer = /PowerVR\s*SGX\s*5[0-4]|Adreno\s*3[0-9]{2}/i.test(
+    input.renderer,
+  );
   const lowFps = input.fps < PERF_THRESHOLD_FPS;
   const reduced = input.reducedMotion || slowRenderer || lowFps;
   return {
@@ -24,6 +28,6 @@ export function choosePerformanceProfile(input: PerformanceInput): PerformancePr
     particleCap: reduced ? 64 : 150,
     enableVoronoi: !reduced,
     enableAces: !lowFps,
-    enableTrailShader: !input.reducedMotion
+    enableTrailShader: !input.reducedMotion,
   };
 }

@@ -19,7 +19,7 @@ export class RoomManager {
       imageId,
       players: [{ id: `p${this.nextPlayer++}`, connected: true }],
       stateVersion: 0,
-      createdAt: Date.now()
+      createdAt: Date.now(),
     };
     this.rooms.set(room.id, room);
     return room;

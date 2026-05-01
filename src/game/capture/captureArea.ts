@@ -1,4 +1,4 @@
-import type { CaptureRegion, GameState, Point, Trail } from '../types';
+import type { CaptureRegion, GameState, Point, Trail } from "../types";
 
 export function calculatePolygonArea(points: Point[]): number {
   if (points.length < 3) return 0;
@@ -14,21 +14,36 @@ export function calculatePolygonArea(points: Point[]): number {
 export function isClosedTrail(trail: Trail, tolerance = 1): boolean {
   const first = trail.points[0];
   const last = trail.points[trail.points.length - 1];
-  return Math.abs(first.x - last.x) <= tolerance && Math.abs(first.y - last.y) <= tolerance;
+  return (
+    Math.abs(first.x - last.x) <= tolerance &&
+    Math.abs(first.y - last.y) <= tolerance
+  );
 }
 
-export function commitCaptureFromTrail(state: GameState, trail: Trail): GameState {
+export function commitCaptureFromTrail(
+  state: GameState,
+  trail: Trail,
+): GameState {
   if (!isClosedTrail(trail)) return state;
   const polygon = trail.points.slice(0, -1);
   const area = calculatePolygonArea(polygon);
   if (area <= 0) return state;
-  const capture: CaptureRegion = { id: `capture-${state.captures.length + 1}`, polygon, area };
+  const capture: CaptureRegion = {
+    id: `capture-${state.captures.length + 1}`,
+    polygon,
+    area,
+  };
   const totalArea = state.imageSize.width * state.imageSize.height;
-  const revealedArea = state.captures.reduce((sum, item) => sum + item.area, 0) + area;
+  const revealedArea =
+    state.captures.reduce((sum, item) => sum + item.area, 0) + area;
   return {
     ...state,
     captures: [...state.captures, capture],
     revealedRatio: Math.min(1, revealedArea / totalArea),
-    players: state.players.map((player) => player.id === trail.playerId ? { ...player, mode: 'safe', activeTrail: null } : player)
+    players: state.players.map((player) =>
+      player.id === trail.playerId
+        ? { ...player, mode: "safe", activeTrail: null }
+        : player,
+    ),
   };
 }

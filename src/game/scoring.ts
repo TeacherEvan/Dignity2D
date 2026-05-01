@@ -14,5 +14,8 @@ export function hasWon(revealedRatio: number): boolean {
 export function calculateCaptureScore(input: CaptureScoreInput): number {
   const base = Math.floor(input.area);
   const streakBonus = input.streak * 25;
-  return Math.max(0, Math.floor(base * input.dangerMultiplier + streakBonus + input.coOpBonus));
+  return Math.max(
+    0,
+    Math.floor(base * input.dangerMultiplier + streakBonus + input.coOpBonus),
+  );
 }
