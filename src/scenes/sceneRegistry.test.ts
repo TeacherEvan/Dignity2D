@@ -9,10 +9,8 @@ vi.mock("phaser", () => ({
 import { sceneRegistry } from "./sceneRegistry";
 
 describe("sceneRegistry", () => {
-  it("contains home and game scenes", () => {
+  it("contains only the gameplay scene in the deferred Phaser bundle", () => {
     expect(sceneRegistry.map((scene) => scene.key)).toEqual([
-      "BootScene",
-      "HomeScene",
       "GameScene",
     ]);
   });

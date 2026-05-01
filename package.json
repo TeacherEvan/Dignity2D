@@ -7,6 +7,7 @@
     "dev": "vite --host 0.0.0.0",
     "build": "tsc -p tsconfig.json && vite build",
     "preview": "vite preview --host 0.0.0.0",
+    "server:start": "tsx server/main.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
@@ -30,6 +31,7 @@
     "eslint": "latest",
     "jsdom": "^29.1.1",
     "prettier": "latest",
+    "tsx": "^4.21.0",
     "typescript": "latest",
     "vite": "latest",
     "vitest": "latest"

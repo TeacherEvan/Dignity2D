@@ -1,0 +1,182 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  createRoom,
+  createRoomSession,
+  joinRoom,
+  joinRoomSession,
+  reconnectRoom,
+  toWebSocketUrl,
+  uploadImage,
+} from "./serverApi";
+
+const fetchMock = vi.fn();
+
+class MockWebSocket {
+  static instances: MockWebSocket[] = [];
+
+  private listeners = new Map<string, Array<(event?: unknown) => void>>();
+
+  constructor(public readonly url: string) {
+    MockWebSocket.instances.push(this);
+  }
+
+  addEventListener(type: string, listener: (event?: unknown) => void): void {
+    this.listeners.set(type, [...(this.listeners.get(type) ?? []), listener]);
+  }
+
+  send(_data: string): void {}
+
+  close(): void {}
+
+  emit(type: string, event?: unknown): void {
+    for (const listener of this.listeners.get(type) ?? []) {
+      listener(event);
+    }
+  }
+}
+
+vi.stubGlobal("fetch", fetchMock);
+vi.stubGlobal("WebSocket", MockWebSocket as unknown as typeof WebSocket);
+
+afterEach(() => {
+  fetchMock.mockReset();
+  MockWebSocket.instances = [];
+});
+
+describe("serverApi", () => {
+  it("creates rooms over HTTP", async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        roomId: "room-1",
+        playerId: "p1",
+        playerCount: 1,
+        imageId: "img-1",
+        imageUrl: null,
+        bytes: null,
+        retention: null,
+      }),
+    });
+
+    await expect(createRoom("img-1", "http://example.test")).resolves.toMatchObject({
+      roomId: "room-1",
+      playerId: "p1",
+    });
+  });
+
+  it("reconnects room state over websocket", async () => {
+    const pending = reconnectRoom("room-1", "p1", "http://example.test");
+    const socket = MockWebSocket.instances[0]!;
+    socket.emit("open");
+    socket.emit("message", {
+      data: JSON.stringify({ type: "state-sync", stateVersion: 3 }),
+    });
+
+    await expect(pending).resolves.toBe(3);
+    expect(socket.url).toBe("ws://example.test");
+  });
+
+  it("creates a room session by combining HTTP and websocket state sync", async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        roomId: "room-2",
+        playerId: "p2",
+        playerCount: 1,
+        imageId: "img-2",
+        imageUrl: "http://example.test/images/image-2",
+        bytes: 12,
+        retention: "session",
+      }),
+    });
+
+    const pending = createRoomSession("img-2", "http://example.test");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const socket = MockWebSocket.instances[0]!;
+    socket.emit("open");
+    socket.emit("message", {
+      data: JSON.stringify({ type: "state-sync", stateVersion: 5 }),
+    });
+
+    await expect(pending).resolves.toMatchObject({
+      roomId: "room-2",
+      stateVersion: 5,
+    });
+  });
+
+  it("uploads image blobs over HTTP", async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        imageId: "image-1",
+        imageUrl: "http://example.test/images/image-1",
+        retention: "session",
+        bytes: 3,
+      }),
+    });
+
+    const result = await uploadImage(
+      new Blob([new Uint8Array([9, 8, 7])], { type: "image/png" }),
+      "session",
+      "http://example.test",
+    );
+
+    expect(result.retention).toBe("session");
+    expect(result.bytes).toBe(3);
+    expect(result.imageUrl).toContain("/images/image-1");
+  });
+
+  it("joins rooms over HTTP", async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        roomId: "room-8",
+        playerId: "p2",
+        playerCount: 2,
+        imageId: "image-8",
+        imageUrl: "http://example.test/images/image-8",
+        bytes: 44,
+        retention: "session",
+      }),
+    });
+
+    await expect(joinRoom("room-8", "http://example.test")).resolves.toMatchObject({
+      roomId: "room-8",
+      playerId: "p2",
+    });
+  });
+
+  it("creates a joined room session by combining HTTP join and websocket sync", async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        roomId: "room-9",
+        playerId: "p2",
+        playerCount: 2,
+        imageId: "image-9",
+        imageUrl: "http://example.test/images/image-9",
+        bytes: 55,
+        retention: "session",
+      }),
+    });
+
+    const pending = joinRoomSession("room-9", "http://example.test");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const socket = MockWebSocket.instances[0]!;
+    socket.emit("open");
+    socket.emit("message", {
+      data: JSON.stringify({ type: "state-sync", stateVersion: 7 }),
+    });
+
+    await expect(pending).resolves.toMatchObject({
+      roomId: "room-9",
+      playerId: "p2",
+      stateVersion: 7,
+    });
+  });
+
+  it("converts http URLs to websocket URLs", () => {
+    expect(toWebSocketUrl("http://127.0.0.1:8787")).toBe("ws://127.0.0.1:8787");
+    expect(toWebSocketUrl("https://example.test")).toBe("wss://example.test");
+  });
+});

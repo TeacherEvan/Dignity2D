@@ -1,4 +1,3 @@
-import Phaser from "phaser";
-import { gameConfig } from "./game/config";
+import { mountLauncher } from "./launcher";
 
-new Phaser.Game(gameConfig);
+mountLauncher();
