@@ -127,6 +127,7 @@ graph TD
       "@typescript-eslint/eslint-plugin": "latest",
       "@typescript-eslint/parser": "latest",
       "eslint": "latest",
+      "jsdom": "latest",
       "prettier": "latest",
       "typescript": "latest",
       "vite": "latest",
