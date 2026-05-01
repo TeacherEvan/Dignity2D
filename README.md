@@ -46,14 +46,13 @@ Vite serves the game locally and boots the client from `src/main.ts`.
 npm run server:start
 ```
 
-This compiles the server with `tsc -p tsconfig.server.json` and starts the Node server from `server/main.ts`. The default port is `8787`, configurable with the `PORT` environment variable.
+This starts the local HTTP/WebSocket server from `server/main.ts` via `tsx`. The default port is `8787`, configurable with the `PORT` environment variable.
 
 ## Available Scripts
 
 ```bash
 npm run dev           # Start the Vite dev server
 npm run build         # Type-check and build the client bundle
-npm run build:server  # Compile the server TypeScript output to dist-server/
 npm run preview       # Preview the built client locally
 npm run server:start  # Build and run the local HTTP/WebSocket server
 npm run test          # Run all Vitest tests
@@ -69,10 +68,10 @@ npm run format        # Check formatting with Prettier
 
 ### Client
 
-- `src/main.ts` boots the browser app.
-- `src/bootstrap.ts` initializes the Phaser runtime.
-- `src/scenes/HomeScene.ts` is the landing screen.
-- `src/scenes/GameScene.ts` runs the current solo gameplay loop.
+- `src/main.ts` mounts the DOM launcher shell.
+- `src/launcher.ts` owns quick play, room create/join, upload preview, and the return-to-launcher flow.
+- `src/bootstrap.ts` lazy-loads Phaser and starts the runtime only after launcher intent.
+- `src/scenes/GameScene.ts` runs the current solo gameplay loop once Phaser is active.
 
 Core rules stay outside Phaser wherever possible:
 

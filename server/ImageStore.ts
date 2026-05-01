@@ -10,7 +10,11 @@ export class ImageStore {
   private readonly images = new Map<string, StoredImage>();
   private nextId = 1;
 
-  save(buffer: Buffer, retention: string, contentType = "image/webp"): StoredImage {
+  save(
+    buffer: Buffer,
+    retention: string,
+    contentType = "image/webp",
+  ): StoredImage {
     const image: StoredImage = {
       id: `image-${this.nextId++}`,
       buffer,

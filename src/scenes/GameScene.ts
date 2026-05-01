@@ -7,9 +7,17 @@ import {
 } from "../game/collision";
 import { createEnemyWave } from "../enemies/EnemySpawner";
 import { calculateCaptureScore, hasWon } from "../game/scoring";
-import { createInitialGameState, type EnemyState, type GameState, type Point } from "../game/types";
+import {
+  createInitialGameState,
+  type EnemyState,
+  type GameState,
+  type Point,
+} from "../game/types";
 import { VirtualJoystick } from "../input/VirtualJoystick";
-import { calculateRevealPercentText, makeMaskResolution } from "../render/RevealMask";
+import {
+  calculateRevealPercentText,
+  makeMaskResolution,
+} from "../render/RevealMask";
 import type { GameLaunchData } from "../session";
 import { PALETTE } from "../theme/palette";
 import { getPendingLaunchData } from "../session";
@@ -27,7 +35,10 @@ export type GameSceneFrameInput = {
   playerId?: string;
 };
 
-function clampPoint(point: Point, size: { width: number; height: number }): Point {
+function clampPoint(
+  point: Point,
+  size: { width: number; height: number },
+): Point {
   return {
     x: Math.max(0, Math.min(size.width, point.x)),
     y: Math.max(0, Math.min(size.height, point.y)),
@@ -83,7 +94,11 @@ function awardCaptureScore(
 }
 
 export function createSceneGameState(levelId = "solo-default"): GameState {
-  const state = createInitialGameState(levelId, BOARD_SIZE.width, BOARD_SIZE.height);
+  const state = createInitialGameState(
+    levelId,
+    BOARD_SIZE.width,
+    BOARD_SIZE.height,
+  );
   return {
     ...state,
     enemies: createEnemyWave(1, state.imageSize),
@@ -117,7 +132,9 @@ export function advanceGameState(
 
   nextState = movePlayer(nextState, playerId, nextPosition, input.now);
 
-  const movedPlayer = nextState.players.find((player) => player.id === playerId);
+  const movedPlayer = nextState.players.find(
+    (player) => player.id === playerId,
+  );
   if (!movedPlayer) return nextState;
 
   if (
@@ -126,21 +143,24 @@ export function advanceGameState(
     movedPlayer.activeTrail
   ) {
     const polygon = movedPlayer.activeTrail.points.slice(0, -1);
-    const captureArea = polygon.length >= 3
-      ? Math.abs(
-          polygon.reduce((sum, point, index) => {
-            const nextPoint = polygon[(index + 1) % polygon.length];
-            return sum + point.x * nextPoint.y - nextPoint.x * point.y;
-          }, 0),
-        ) / 2
-      : 0;
+    const captureArea =
+      polygon.length >= 3
+        ? Math.abs(
+            polygon.reduce((sum, point, index) => {
+              const nextPoint = polygon[(index + 1) % polygon.length];
+              return sum + point.x * nextPoint.y - nextPoint.x * point.y;
+            }, 0),
+          ) / 2
+        : 0;
     nextState = commitCaptureFromTrail(nextState, movedPlayer.activeTrail);
     if (captureArea > 0) {
       nextState = awardCaptureScore(nextState, playerId, captureArea);
     }
   }
 
-  const activeTrail = nextState.players.find((player) => player.id === playerId)?.activeTrail;
+  const activeTrail = nextState.players.find(
+    (player) => player.id === playerId,
+  )?.activeTrail;
   if (
     activeTrail &&
     nextState.enemies.some((enemy) =>
@@ -188,7 +208,11 @@ export class GameScene extends Phaser.Scene {
     this.state = createSceneGameState(this.launchData.levelId);
     this.cursors = this.input.keyboard?.createCursorKeys();
 
-    const maskSize = makeMaskResolution(BOARD_SIZE.width, BOARD_SIZE.height, 640);
+    const maskSize = makeMaskResolution(
+      BOARD_SIZE.width,
+      BOARD_SIZE.height,
+      640,
+    );
     this.boardOrigin = {
       x: Math.round((this.scale.width - maskSize.width) / 2),
       y: 156,
@@ -205,16 +229,33 @@ export class GameScene extends Phaser.Scene {
       .setStrokeStyle(3, PALETTE.GOLD);
 
     this.previewFrame = this.add
-      .rectangle(this.boardOrigin.x + BOARD_SIZE.width / 2, 110, 150, 84, PALETTE.BORDER)
+      .rectangle(
+        this.boardOrigin.x + BOARD_SIZE.width / 2,
+        110,
+        150,
+        84,
+        PALETTE.BORDER,
+      )
       .setStrokeStyle(2, PALETTE.SAND);
     if (this.launchData.imageUrl && this.textures.exists("selected-preview")) {
-      this.previewImage = this.add.image(this.boardOrigin.x + BOARD_SIZE.width / 2, 110, "selected-preview");
+      this.previewImage = this.add.image(
+        this.boardOrigin.x + BOARD_SIZE.width / 2,
+        110,
+        "selected-preview",
+      );
       this.previewImage.setDisplaySize(142, 76);
     }
-    this.previewLabel = this.add.text(this.boardOrigin.x + BOARD_SIZE.width / 2, 66, this.launchData.imageUrl ? "Uploaded preview" : "Default hidden image", {
-      color: PALETTE.css.SAND,
-      fontSize: "14px",
-    }).setOrigin(0.5);
+    this.previewLabel = this.add
+      .text(
+        this.boardOrigin.x + BOARD_SIZE.width / 2,
+        66,
+        this.launchData.imageUrl ? "Uploaded preview" : "Default hidden image",
+        {
+          color: PALETTE.css.SAND,
+          fontSize: "14px",
+        },
+      )
+      .setOrigin(0.5);
 
     this.captureGraphics = this.add.graphics();
     this.trailGraphics = this.add.graphics();
@@ -231,10 +272,15 @@ export class GameScene extends Phaser.Scene {
       color: PALETTE.css.GOLD,
       fontSize: "18px",
     });
-    this.statusText = this.add.text(24, 80, `Mask ${maskSize.width}x${maskSize.height}`, {
-      color: PALETTE.css.SAND,
-      fontSize: "16px",
-    });
+    this.statusText = this.add.text(
+      24,
+      80,
+      `Mask ${maskSize.width}x${maskSize.height}`,
+      {
+        color: PALETTE.css.SAND,
+        fontSize: "16px",
+      },
+    );
 
     this.input.on("pointermove", (pointer: Phaser.Input.Pointer) => {
       if (!pointer.isDown) return;
@@ -269,8 +315,11 @@ export class GameScene extends Phaser.Scene {
     if (!this.cursors) return { x: 0, y: 0 };
 
     return {
-      x: (this.cursors.right?.isDown ? 1 : 0) - (this.cursors.left?.isDown ? 1 : 0),
-      y: (this.cursors.down?.isDown ? 1 : 0) - (this.cursors.up?.isDown ? 1 : 0),
+      x:
+        (this.cursors.right?.isDown ? 1 : 0) -
+        (this.cursors.left?.isDown ? 1 : 0),
+      y:
+        (this.cursors.down?.isDown ? 1 : 0) - (this.cursors.up?.isDown ? 1 : 0),
     };
   }
 
@@ -283,7 +332,12 @@ export class GameScene extends Phaser.Scene {
 
   private renderState(): void {
     const player = this.state.players[0];
-    if (!player || !this.captureGraphics || !this.trailGraphics || !this.playerMarker) {
+    if (
+      !player ||
+      !this.captureGraphics ||
+      !this.trailGraphics ||
+      !this.playerMarker
+    ) {
       return;
     }
 
@@ -326,14 +380,20 @@ export class GameScene extends Phaser.Scene {
       marker.setPosition(position.x, position.y);
     });
 
-    this.revealText?.setText(calculateRevealPercentText(this.state.revealedRatio));
+    this.revealText?.setText(
+      calculateRevealPercentText(this.state.revealedRatio),
+    );
     this.scoreText?.setText(`Score ${player.score}`);
-    const roomLabel = this.launchData.roomId ? `Room ${this.launchData.roomId}` : null;
-    const imageLabel = this.launchData.imageId ? `Image ${this.launchData.imageId}` : null;
+    const roomLabel = this.launchData.roomId
+      ? `Room ${this.launchData.roomId}`
+      : null;
+    const imageLabel = this.launchData.imageId
+      ? `Image ${this.launchData.imageId}`
+      : null;
     this.statusText?.setText(
       this.state.won
         ? "Image secured"
-        : roomLabel ?? imageLabel ?? `Enemies ${this.state.enemies.length}`,
+        : (roomLabel ?? imageLabel ?? `Enemies ${this.state.enemies.length}`),
     );
   }
 }

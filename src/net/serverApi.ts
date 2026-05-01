@@ -62,9 +62,7 @@ export function reconnectRoom(
     const socket = new WebSocket(toWebSocketUrl(serverUrl));
 
     socket.addEventListener("open", () => {
-      socket.send(
-        JSON.stringify({ type: "reconnect", roomId, playerId }),
-      );
+      socket.send(JSON.stringify({ type: "reconnect", roomId, playerId }));
     });
 
     socket.addEventListener("message", (event) => {

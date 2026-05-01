@@ -1,7 +1,15 @@
-import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import {
+  createServer,
+  type IncomingMessage,
+  type ServerResponse,
+} from "node:http";
 import { Buffer } from "node:buffer";
 import { WebSocketServer } from "ws";
-import { isClientMessage, makeRoomCreated, type ServerMessage } from "../shared/protocol";
+import {
+  isClientMessage,
+  makeRoomCreated,
+  type ServerMessage,
+} from "../shared/protocol";
 import { ImageStore } from "./ImageStore";
 import { RoomManager } from "./rooms/RoomManager";
 import { normalizeRetention, buildUploadPolicy } from "./upload/processImage";
@@ -36,7 +44,12 @@ function buildImageMetadata(
   imageStore: ImageStore,
   imageId: string,
   baseUrl: string,
-): { imageId: string; imageUrl: string | null; bytes: number | null; retention: string | null } {
+): {
+  imageId: string;
+  imageUrl: string | null;
+  bytes: number | null;
+  retention: string | null;
+} {
   const stored = imageStore.get(imageId);
   if (!stored) {
     return {
@@ -55,7 +68,11 @@ function buildImageMetadata(
   };
 }
 
-function writeJson(response: ServerResponse, statusCode: number, body: JsonValue): void {
+function writeJson(
+  response: ServerResponse,
+  statusCode: number,
+  body: JsonValue,
+): void {
   response.writeHead(statusCode, {
     ...CORS_HEADERS,
     "content-type": "application/json",
@@ -66,7 +83,9 @@ function writeJson(response: ServerResponse, statusCode: number, body: JsonValue
 function readBody(request: IncomingMessage): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
-    request.on("data", (chunk) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
+    request.on("data", (chunk) =>
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)),
+    );
     request.on("end", () => resolve(Buffer.concat(chunks)));
     request.on("error", reject);
   });
@@ -80,7 +99,10 @@ async function readJsonBody(request: IncomingMessage): Promise<JsonValue> {
   return JSON.parse(raw.toString("utf8")) as JsonValue;
 }
 
-function sendSocketMessage(socket: { send: (data: string) => void }, message: ServerMessage): void {
+function sendSocketMessage(
+  socket: { send: (data: string) => void },
+  message: ServerMessage,
+): void {
   socket.send(JSON.stringify(message));
 }
 
@@ -103,7 +125,10 @@ export function createAppServer(): AppServer {
         return;
       }
 
-      if (request.method === "GET" && requestUrl.pathname.startsWith("/images/")) {
+      if (
+        request.method === "GET" &&
+        requestUrl.pathname.startsWith("/images/")
+      ) {
         const imageId = requestUrl.pathname.replace("/images/", "");
         const stored = imageStore.get(imageId);
         if (!stored) {
@@ -122,7 +147,8 @@ export function createAppServer(): AppServer {
 
       if (request.method === "POST" && requestUrl.pathname === "/rooms") {
         const body = await readJsonBody(request);
-        const imageId = typeof body.imageId === "string" ? body.imageId : "default-image";
+        const imageId =
+          typeof body.imageId === "string" ? body.imageId : "default-image";
         const room = roomManager.createRoom(imageId);
         const image = buildImageMetadata(imageStore, room.imageId, baseUrl);
         writeJson(response, 201, {
@@ -153,7 +179,9 @@ export function createAppServer(): AppServer {
       }
 
       if (request.method === "POST" && requestUrl.pathname === "/upload") {
-        const retention = normalizeRetention(requestUrl.searchParams.get("retention") ?? "session");
+        const retention = normalizeRetention(
+          requestUrl.searchParams.get("retention") ?? "session",
+        );
         const policy = buildUploadPolicy(retention);
         const source = await readBody(request);
         if (source.length === 0) {
@@ -165,7 +193,9 @@ export function createAppServer(): AppServer {
         try {
           output = await transformImage(source, policy);
         } catch {
-          writeJson(response, 400, { error: "Upload image could not be processed." });
+          writeJson(response, 400, {
+            error: "Upload image could not be processed.",
+          });
           return;
         }
 
@@ -192,12 +222,18 @@ export function createAppServer(): AppServer {
       try {
         parsed = JSON.parse(message.toString());
       } catch {
-        sendSocketMessage(socket, { type: "error", message: "Invalid JSON payload." });
+        sendSocketMessage(socket, {
+          type: "error",
+          message: "Invalid JSON payload.",
+        });
         return;
       }
 
       if (!isClientMessage(parsed)) {
-        sendSocketMessage(socket, { type: "error", message: "Unsupported message." });
+        sendSocketMessage(socket, {
+          type: "error",
+          message: "Unsupported message.",
+        });
         return;
       }
 
@@ -210,7 +246,10 @@ export function createAppServer(): AppServer {
         case "join-room": {
           const room = roomManager.joinRoom(parsed.roomId);
           if (!room) {
-            sendSocketMessage(socket, { type: "error", message: "Room not found or full." });
+            sendSocketMessage(socket, {
+              type: "error",
+              message: "Room not found or full.",
+            });
             return;
           }
           sendSocketMessage(socket, {
@@ -223,7 +262,10 @@ export function createAppServer(): AppServer {
         case "reconnect": {
           const room = roomManager.getRoom(parsed.roomId);
           if (!room) {
-            sendSocketMessage(socket, { type: "error", message: "Room not found." });
+            sendSocketMessage(socket, {
+              type: "error",
+              message: "Room not found.",
+            });
             return;
           }
           sendSocketMessage(socket, {
@@ -237,7 +279,10 @@ export function createAppServer(): AppServer {
         case "capture-proposal": {
           const room = roomManager.getRoom(parsed.roomId);
           if (!room) {
-            sendSocketMessage(socket, { type: "error", message: "Room not found." });
+            sendSocketMessage(socket, {
+              type: "error",
+              message: "Room not found.",
+            });
             return;
           }
           sendSocketMessage(socket, {
@@ -254,7 +299,9 @@ export function createAppServer(): AppServer {
   return {
     roomManager,
     async listen(port = 0): Promise<number> {
-      await new Promise<void>((resolve) => httpServer.listen(port, "127.0.0.1", () => resolve()));
+      await new Promise<void>((resolve) =>
+        httpServer.listen(port, "127.0.0.1", () => resolve()),
+      );
       const address = httpServer.address();
       if (!address || typeof address === "string") {
         throw new Error("Server did not bind to a TCP port.");

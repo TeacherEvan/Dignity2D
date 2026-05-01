@@ -61,11 +61,17 @@ export function mountLauncher(): void {
 
   const status = document.querySelector<HTMLParagraphElement>("#home-status");
   const roomInput = document.querySelector<HTMLInputElement>("#room-id-input");
-  const roomLabel = document.querySelector<HTMLParagraphElement>("#current-room-label");
+  const roomLabel = document.querySelector<HTMLParagraphElement>(
+    "#current-room-label",
+  );
   const uploadInput = document.querySelector<HTMLInputElement>("#upload-input");
-  const uploadPreview = document.querySelector<HTMLImageElement>("#upload-preview");
-  const uploadFilename = document.querySelector<HTMLParagraphElement>("#upload-filename");
-  const returnButton = document.querySelector<HTMLButtonElement>("#return-to-launcher-button");
+  const uploadPreview =
+    document.querySelector<HTMLImageElement>("#upload-preview");
+  const uploadFilename =
+    document.querySelector<HTMLParagraphElement>("#upload-filename");
+  const returnButton = document.querySelector<HTMLButtonElement>(
+    "#return-to-launcher-button",
+  );
 
   const setStatus = (message: string): void => {
     if (status) status.textContent = message;
@@ -73,7 +79,9 @@ export function mountLauncher(): void {
 
   const updateRoomLabel = (message?: string): void => {
     if (!roomLabel) return;
-    roomLabel.textContent = message ?? (state.roomId ? `Current room: ${state.roomId}` : "No room created yet.");
+    roomLabel.textContent =
+      message ??
+      (state.roomId ? `Current room: ${state.roomId}` : "No room created yet.");
   };
 
   const showPreview = (url: string, fileName: string): void => {
@@ -84,7 +92,9 @@ export function mountLauncher(): void {
   };
 
   const startGame = async (data: GameLaunchData): Promise<void> => {
-    setStatus(state.roomId ? `Launching ${state.roomId}...` : "Launching game...");
+    setStatus(
+      state.roomId ? `Launching ${state.roomId}...` : "Launching game...",
+    );
     const { startGameSession } = await import("./bootstrap");
     await startGameSession({
       imageId: state.selectedImageId,
@@ -114,7 +124,10 @@ export function mountLauncher(): void {
   document
     .querySelector<HTMLButtonElement>("#quick-play-button")
     ?.addEventListener("click", () => {
-      void startGame({ imageId: state.selectedImageId, imageUrl: state.selectedImageUrl });
+      void startGame({
+        imageId: state.selectedImageId,
+        imageUrl: state.selectedImageUrl,
+      });
     });
 
   document
@@ -128,7 +141,10 @@ export function mountLauncher(): void {
         state.selectedImageId = session.imageId;
         if (session.imageUrl) {
           state.selectedImageUrl = session.imageUrl;
-          showPreview(session.imageUrl, state.selectedFileName ?? session.imageId);
+          showPreview(
+            session.imageUrl,
+            state.selectedFileName ?? session.imageId,
+          );
         }
         if (roomInput) {
           roomInput.value = session.roomId;
@@ -143,7 +159,9 @@ export function mountLauncher(): void {
           stateVersion: session.stateVersion,
         });
       } catch (error) {
-        setStatus(error instanceof Error ? error.message : "Room creation failed.");
+        setStatus(
+          error instanceof Error ? error.message : "Room creation failed.",
+        );
       }
     });
 
@@ -193,10 +211,11 @@ export function mountLauncher(): void {
     void (async () => {
       setStatus("Validating upload...");
       try {
-        const [{ isAcceptedImageType, validateUploadSize }, { uploadImage }] = await Promise.all([
-          import("./upload/ImagePicker"),
-          import("./net/serverApi"),
-        ]);
+        const [{ isAcceptedImageType, validateUploadSize }, { uploadImage }] =
+          await Promise.all([
+            import("./upload/ImagePicker"),
+            import("./net/serverApi"),
+          ]);
 
         if (!isAcceptedImageType(file.type)) {
           setStatus("Upload type is not supported.");
@@ -214,7 +233,9 @@ export function mountLauncher(): void {
         state.selectedImageUrl = uploaded.imageUrl;
         state.selectedFileName = file.name;
         showPreview(state.selectedImageUrl, file.name);
-        setStatus(`Upload ready (${uploaded.bytes} bytes, ${uploaded.retention}).`);
+        setStatus(
+          `Upload ready (${uploaded.bytes} bytes, ${uploaded.retention}).`,
+        );
       } catch (error) {
         setStatus(error instanceof Error ? error.message : "Upload failed.");
       } finally {

@@ -22,7 +22,9 @@ test("home scene can upload an image and create a room", async ({ page }) => {
   await expect(page.locator("#upload-preview")).toBeVisible();
 
   await page.locator("#create-room-button").click();
-  await expect(page.locator("#current-room-label")).toContainText("Room ready: room-");
+  await expect(page.locator("#current-room-label")).toContainText(
+    "Room ready: room-",
+  );
   await expect(page.locator("canvas")).toBeVisible();
   await expect(page.locator("#return-to-launcher-button")).toBeVisible();
   await page.locator("#return-to-launcher-button").click();
@@ -31,11 +33,15 @@ test("home scene can upload an image and create a room", async ({ page }) => {
   await expect(page.locator("canvas")).toBeVisible();
 });
 
-test("visible room form allows joining after room creation", async ({ browser }) => {
+test("visible room form allows joining after room creation", async ({
+  browser,
+}) => {
   const creator = await browser.newPage();
   await creator.goto("/");
   await creator.locator("#create-room-button").click();
-  await expect(creator.locator("#current-room-label")).toContainText("Room ready: room-");
+  await expect(creator.locator("#current-room-label")).toContainText(
+    "Room ready: room-",
+  );
   const roomText = await creator.locator("#current-room-label").textContent();
   const roomId = roomText?.match(/room-\d+/)?.[0] ?? "";
   await creator.close();

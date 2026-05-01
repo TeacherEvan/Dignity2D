@@ -6,9 +6,11 @@ Dignity Arcade is structured as a logic-first Phaser + TypeScript game. The repo
 
 ## Runtime Layout
 
-- Client shell: Vite serves the browser app and boots Phaser from `src/main.ts`.
-- Game container: `src/game/config.ts` configures a mobile-sized WebGL Phaser game with FIT scaling and registers the scene list from `src/scenes/sceneRegistry.ts`.
-- Scenes: `BootScene` immediately routes to `HomeScene`, and `HomeScene` exposes the current entry points for solo play, room creation, and image upload. `GameScene` currently initializes a default solo state and renders a minimal HUD/canvas frame.
+- Client shell: Vite serves the browser app and mounts the DOM launcher from `src/main.ts`.
+- Launcher flow: `src/launcher.ts` owns quick play, room create/join, upload preview, and the return-to-launcher path before Phaser is loaded.
+- Game bootstrap: `src/bootstrap.ts` lazy-loads Phaser and `src/game/config.ts`, creates the runtime only on first launch, and restarts `GameScene` with fresh session data for subsequent launches.
+- Bundle strategy: Phaser is intentionally deferred behind launcher intent and split into subsystem chunks at build time so the browser avoids downloading one oversized runtime asset up front.
+- Scene surface: `src/scenes/GameScene.ts` is the only Phaser scene in the current client bundle. It initializes the solo state, renders the board and preview card, and consumes launch data from `src/session.ts`.
 - Pure game rules: territory capture, scoring, border safety, collision handling, enemy generation, and reveal formatting live in pure TypeScript modules under `src/game`, `src/enemies`, `src/input`, and `src/render`.
 - Theme layer: palette, trail styling, Voronoi shader, ACES tonemapping, and performance selection live under `src/theme` and `src/performance`.
 - Shared contracts: message shapes shared between client and server live in `shared/protocol.ts`.
@@ -73,26 +75,27 @@ Networking is represented by tested contracts and room logic:
 
 Current intended flow:
 
-1. Phaser boots and enters `HomeScene`.
-2. A solo game creates `GameState` with `createInitialGameState()`.
-3. Input math feeds movement.
-4. Border logic decides whether the player remains safe or starts drawing.
-5. Closed trails become capture regions.
-6. Scoring updates reveal progress and win state.
-7. Theme and performance modules decide how much visual polish is enabled.
-8. Shared protocol and room logic are available for later server/bootstrap wiring.
+1. The DOM launcher mounts immediately and collects room and upload intent before the Phaser bundle is requested.
+2. Launcher actions call `startGameSession()`, which stores pending launch data and lazy-loads Phaser plus the runtime config.
+3. `GameScene` merges the pending launch data into scene init, creates `GameState` with `createInitialGameState()`, and renders the board plus upload preview.
+4. Input math feeds movement.
+5. Border logic decides whether the player remains safe or starts drawing.
+6. Closed trails become capture regions.
+7. Scoring updates reveal progress and win state.
+8. Theme and performance modules decide how much visual polish is enabled.
+9. Shared protocol and room logic back the create/join/upload flows used by the launcher.
 
 ## Testing Strategy
 
 The repo is biased toward small deterministic tests:
 
 - Unit tests cover gameplay state, capture logic, scoring, collisions, input math, enemies, protocol messages, room management, upload policy, theme math, and performance fallbacks.
-- Playwright smoke covers the browser entry path and confirms the canvas-based home screen loads.
+- Browser coverage includes bootstrap tests for lazy Phaser startup plus Playwright smoke for launcher create/join/upload flows and canvas visibility.
 - Phaser-heavy tests are kept shallow; when needed, tests mock Phaser instead of requiring a full canvas runtime.
 
 ## Verified Commands
 
-The following commands were run successfully against the current codebase on 2026-05-01:
+The following commands were run successfully against the current codebase on 2026-05-02:
 
 - `npm test`
 - `npm run build`
@@ -104,8 +107,8 @@ The following commands were run successfully against the current codebase on 202
 
 The repo has strong logic coverage, but the runtime wiring remains deliberately thin in a few places:
 
-- `GameScene` currently shows a minimal frame and HUD rather than the full gameplay loop.
-- Room management and upload logic exist as modules, but there is not yet a full server bootstrap or HTTP/WebSocket transport entrypoint in this repo.
-- The production build currently emits a large client bundle warning from Vite, which should be addressed before shipping to lower-end devices.
+- `GameScene` currently focuses on the playable solo loop and status HUD rather than a fully polished progression-driven game shell.
+- The launcher is DOM-first by design, so visual cohesion between the pre-game shell and Phaser scene should continue to be refined as features land.
+- Phaser bundle size is now managed through lazy loading and subsystem chunking, but runtime startup cost should still be monitored on lower-end devices as more features are added.
 
 This means the architecture is ready for continued feature wiring, but the repo should be described as a well-tested gameplay foundation rather than a fully integrated shipped game.

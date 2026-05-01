@@ -48,11 +48,14 @@ describe("server entrypoint", () => {
       .png()
       .toBuffer();
 
-    const uploadResponse = await fetch(`${app.getUrl()}/upload?retention=bogus`, {
-      method: "POST",
-      headers: { "content-type": "image/png" },
-      body: new Uint8Array(pngBuffer),
-    });
+    const uploadResponse = await fetch(
+      `${app.getUrl()}/upload?retention=bogus`,
+      {
+        method: "POST",
+        headers: { "content-type": "image/png" },
+        body: new Uint8Array(pngBuffer),
+      },
+    );
     expect(uploadResponse.ok).toBe(true);
     const uploaded = (await uploadResponse.json()) as {
       imageId: string;
@@ -82,7 +85,9 @@ describe("server entrypoint", () => {
 
       socket.once("open", () => {
         socket.send("not-json");
-        socket.send(JSON.stringify({ type: "create-room", imageId: "ws-image" }));
+        socket.send(
+          JSON.stringify({ type: "create-room", imageId: "ws-image" }),
+        );
       });
 
       socket.on("message", (message) => {

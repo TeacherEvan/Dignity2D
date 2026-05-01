@@ -5,7 +5,9 @@ const app = createAppServer();
 
 async function main(): Promise<void> {
   const activePort = await app.listen(Number.isNaN(port) ? 8787 : port);
-  process.stdout.write(`Dignity Arcade server listening on http://127.0.0.1:${activePort}\n`);
+  process.stdout.write(
+    `Dignity Arcade server listening on http://127.0.0.1:${activePort}\n`,
+  );
 }
 
 void main();

@@ -1,20 +1,27 @@
-import Phaser from "phaser";
-import { sceneRegistry } from "../scenes/sceneRegistry";
+import type Phaser from "phaser";
 
-export const gameConfig: Phaser.Types.Core.GameConfig = {
-  type: Phaser.WEBGL,
-  parent: "game-container",
-  backgroundColor: "#0A0812",
-  width: 390,
-  height: 844,
-  scale: {
-    mode: Phaser.Scale.FIT,
-    autoCenter: Phaser.Scale.CENTER_BOTH,
-  },
-  render: {
-    antialias: true,
-    antialiasGL: true,
-    powerPreference: "high-performance",
-  },
-  scene: sceneRegistry.map((item) => item.scene),
-};
+type PhaserRuntime = typeof Phaser;
+
+export async function createGameConfig(
+  runtime: PhaserRuntime,
+): Promise<Phaser.Types.Core.GameConfig> {
+  const { GameScene } = await import("../scenes/GameScene");
+
+  return {
+    type: runtime.WEBGL,
+    parent: "game-container",
+    backgroundColor: "#0A0812",
+    width: 390,
+    height: 844,
+    scale: {
+      mode: runtime.Scale.FIT,
+      autoCenter: runtime.Scale.CENTER_BOTH,
+    },
+    render: {
+      antialias: true,
+      antialiasGL: true,
+      powerPreference: "high-performance",
+    },
+    scene: [GameScene],
+  };
+}

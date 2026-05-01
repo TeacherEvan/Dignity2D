@@ -1,4 +1,8 @@
 dist
+dist-server
 node_modules
 playwright-report
 test-results
+.github/superpower/plan
+jobcard.md
+src/vendor/phaser3spectorjs.cjs

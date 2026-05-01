@@ -58,7 +58,9 @@ describe("serverApi", () => {
       }),
     });
 
-    await expect(createRoom("img-1", "http://example.test")).resolves.toMatchObject({
+    await expect(
+      createRoom("img-1", "http://example.test"),
+    ).resolves.toMatchObject({
       roomId: "room-1",
       playerId: "p1",
     });
@@ -140,7 +142,9 @@ describe("serverApi", () => {
       }),
     });
 
-    await expect(joinRoom("room-8", "http://example.test")).resolves.toMatchObject({
+    await expect(
+      joinRoom("room-8", "http://example.test"),
+    ).resolves.toMatchObject({
       roomId: "room-8",
       playerId: "p2",
     });

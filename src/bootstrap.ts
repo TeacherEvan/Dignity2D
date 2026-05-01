@@ -1,14 +1,20 @@
-import Phaser from "phaser";
-import { gameConfig } from "./game/config";
+import type Phaser from "phaser";
 import type { GameLaunchData } from "./session";
 import { setPendingLaunchData } from "./session";
 
 let gameInstance: Phaser.Game | null = null;
 
-export async function startGameSession(data: GameLaunchData): Promise<Phaser.Game> {
+export async function startGameSession(
+  data: GameLaunchData,
+): Promise<Phaser.Game> {
   setPendingLaunchData(data);
 
   if (!gameInstance) {
+    const [{ default: Phaser }, { createGameConfig }] = await Promise.all([
+      import("phaser"),
+      import("./game/config"),
+    ]);
+    const gameConfig = await createGameConfig(Phaser);
     gameInstance = new Phaser.Game(gameConfig);
     return gameInstance;
   }

@@ -1,15 +1,15 @@
 export class Spector {
-	readonly onCapture = {
-		add: () => undefined,
-	};
+  readonly onCapture = {
+    add: () => undefined,
+  };
 
-	captureCanvas(): void {}
+  captureCanvas(): void {}
 
-	captureNextFrame(): void {}
+  captureNextFrame(): void {}
 
-	getFps(): number {
-		return 0;
-	}
+  getFps(): number {
+    return 0;
+  }
 }
 
 export default { Spector };
