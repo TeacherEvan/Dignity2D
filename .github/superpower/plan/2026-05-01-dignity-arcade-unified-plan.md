@@ -1,5 +1,7 @@
 # Dignity Arcade Game Unified Implementation Plan
 
+Historical note: this plan has already been executed for the current repo phase. Use `README.md` and `architecture.md` for the current implementation state, and treat this file as execution history rather than an up-to-date task list.
+
 **Goal:** Build Dignity Arcade Game as a Phaser + TypeScript mobile web territory-reveal arcade game with solo play first, then online co-op, uploaded image support, privacy controls, progression, and a Golden Cyberpunk Egyptian visual identity that stays readable and performant on phones.
 
 **Architecture:** Vite + Phaser client, Vitest unit tests, Playwright smoke tests, Node.js WebSocket backend, and shared TypeScript protocol modules. Core gameplay rules live in deterministic pure TypeScript modules used by both client and server. Phaser scenes render and collect input. The server owns authoritative room state for online co-op.

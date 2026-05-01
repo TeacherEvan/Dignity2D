@@ -5,6 +5,7 @@ type PhaserRuntime = typeof Phaser;
 export async function createGameConfig(
   runtime: PhaserRuntime,
 ): Promise<Phaser.Types.Core.GameConfig> {
+  // Scene code stays deferred until a session actually starts.
   const { GameScene } = await import("../scenes/GameScene");
 
   return {

@@ -3,6 +3,7 @@ import { defineConfig } from "@playwright/test";
 export default defineConfig({
   testDir: "./tests/e2e",
   webServer: [
+    // End-to-end coverage exercises both the launcher shell and the local room/upload server.
     {
       command: "npm run dev",
       url: "http://127.0.0.1:5173",

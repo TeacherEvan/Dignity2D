@@ -10,6 +10,7 @@ export async function startGameSession(
   setPendingLaunchData(data);
 
   if (!gameInstance) {
+    // Keep Phaser out of first paint; the launcher requests the runtime on demand.
     const [{ default: Phaser }, { createGameConfig }] = await Promise.all([
       import("phaser"),
       import("./game/config"),

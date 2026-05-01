@@ -14,6 +14,13 @@ The current repository includes:
 
 This repo is best described as a well-tested gameplay foundation with an active playable shell. The solo game path is wired into `GameScene`, while room transport and upload processing are available as backend foundations for broader multiplayer and content flows.
 
+## Product Direction
+
+- Mobile web is the primary target, with a portrait-first play surface.
+- The app is guest-friendly by default: quick play and room flows do not require accounts.
+- Uploads are privacy-first, with session retention as the default and metadata stripped during processing.
+- Competitive fairness is expected to come from normalized ranked templates rather than unrestricted build power.
+
 ## Stack
 
 - TypeScript
@@ -71,6 +78,7 @@ npm run format        # Check formatting with Prettier
 - `src/main.ts` mounts the DOM launcher shell.
 - `src/launcher.ts` owns quick play, room create/join, upload preview, and the return-to-launcher flow.
 - `src/bootstrap.ts` lazy-loads Phaser and starts the runtime only after launcher intent.
+- Phaser is intentionally split into deferred subsystem chunks so first paint stays light and the full runtime only loads when a session starts.
 - `src/scenes/GameScene.ts` runs the current solo gameplay loop once Phaser is active.
 
 Core rules stay outside Phaser wherever possible:
@@ -149,3 +157,4 @@ dist-server/ Compiled server output
 - Upload output is private by default, metadata-stripped, and normalized to WebP.
 - The architecture favors pure modules first, with Phaser used mainly as the presentation and orchestration layer.
 - The codebase includes both client and server test suites, so narrow checks are usually available before broader integration work.
+- The main next-quality step is polish: better gameplay presentation, stronger onboarding/feedback, and tighter visual cohesion between the launcher and Phaser runtime.

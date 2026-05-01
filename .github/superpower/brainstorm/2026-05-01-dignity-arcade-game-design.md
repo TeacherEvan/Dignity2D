@@ -1,5 +1,7 @@
 # Design: Dignity Arcade Game
 
+Historical note: this file is the approved design source for the project direction. For current implementation truth, use `README.md` and `architecture.md` at the repo root.
+
 **Date:** 2026-05-01
 **Status:** Approved
 **Scope Tier:** Production

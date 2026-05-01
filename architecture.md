@@ -4,6 +4,8 @@
 
 Dignity Arcade is structured as a logic-first Phaser + TypeScript game. The repo favors deterministic, testable modules for gameplay, networking contracts, upload policy, and performance fallbacks, with Phaser scenes acting as a thin presentation layer.
 
+This document is the current implementation truth. The brainstorm and plan files under `.github/superpower/` remain useful as historical design and execution inputs, but they should not override the current runtime and module boundaries described here.
+
 ## Runtime Layout
 
 - Client shell: Vite serves the browser app and mounts the DOM launcher from `src/main.ts`.
@@ -110,5 +112,12 @@ The repo has strong logic coverage, but the runtime wiring remains deliberately 
 - `GameScene` currently focuses on the playable solo loop and status HUD rather than a fully polished progression-driven game shell.
 - The launcher is DOM-first by design, so visual cohesion between the pre-game shell and Phaser scene should continue to be refined as features land.
 - Phaser bundle size is now managed through lazy loading and subsystem chunking, but runtime startup cost should still be monitored on lower-end devices as more features are added.
+
+## Documentation Order
+
+- `README.md` is the primary entry point for setup, scripts, and current product-facing scope.
+- `architecture.md` is the authoritative description of current runtime structure and module ownership.
+- `jobcard.md` is only a lightweight historical execution note.
+- `.github/superpower/brainstorm/...` and `.github/superpower/plan/...` are archival inputs that explain why the repo looks the way it does, not what still needs to be built next.
 
 This means the architecture is ready for continued feature wiring, but the repo should be described as a well-tested gameplay foundation rather than a fully integrated shipped game.
