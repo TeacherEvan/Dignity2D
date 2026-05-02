@@ -58,10 +58,12 @@ export function mountLauncher(): void {
   const resolvedLayoutId = resolvedLayout.id;
 
   const shell = document.querySelector<HTMLElement>("#launcher-shell");
+  const motionMode = resolveMotionMode();
+  const isReducedMotion = motionMode === "reduced";
   if (shell) {
     shell.dataset.deviceClass = displayProfile.deviceClass;
     shell.dataset.layoutId = resolvedLayoutId;
-    shell.dataset.motionMode = resolveMotionMode();
+    shell.dataset.motionMode = motionMode;
   }
 
   const status = document.querySelector<HTMLParagraphElement>("#home-status");
@@ -94,7 +96,7 @@ export function mountLauncher(): void {
   let statusToneTimer = 0;
 
   const setActiveCue = (cue: string): void => {
-    if (!shell) return;
+    if (!shell || isReducedMotion) return;
 
     shell.dataset.activeCue = cue;
     window.clearTimeout(activeCueTimer);
@@ -106,7 +108,7 @@ export function mountLauncher(): void {
   };
 
   const setStatusTone = (tone: "warm" | "cool"): void => {
-    if (!status) return;
+    if (!status || isReducedMotion) return;
 
     status.dataset.emberTone = tone;
     setActiveCue("status");
@@ -171,7 +173,7 @@ export function mountLauncher(): void {
     element: HTMLButtonElement | null,
     cue: string,
   ): void => {
-    if (!element) return;
+    if (!element || isReducedMotion) return;
 
     const activateCue = () => {
       setActiveCue(cue);

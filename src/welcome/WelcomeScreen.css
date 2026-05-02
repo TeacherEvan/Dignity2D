@@ -45,9 +45,8 @@
   pointer-events: none;
   opacity: 0.78;
   background:
-    radial-gradient(circle at 18% 24%, rgba(0, 255, 255, 0.14), transparent 18%),
-    radial-gradient(circle at 81% 72%, rgba(255, 140, 0, 0.16), transparent 20%);
-  animation: launcher-ember-idle 22s ease-in-out infinite;
+    radial-gradient(circle at 18% 24%, rgba(0, 255, 255, 0.08), transparent 16%),
+    radial-gradient(circle at 81% 72%, rgba(255, 140, 0, 0.08), transparent 18%);
 }
 
 #launcher-ember-layer::before,
@@ -58,22 +57,24 @@
   height: 180px;
   border-radius: 999px;
   filter: blur(28px);
-  opacity: 0.4;
+  opacity: 0;
+  transition:
+    opacity 220ms ease,
+    transform 220ms ease;
 }
 
 #launcher-ember-layer::before {
-  top: -42px;
-  right: -34px;
+  top: 44px;
+  left: 28px;
   background: radial-gradient(circle, rgba(0, 255, 255, 0.22), transparent 68%);
-  animation: launcher-ember-drift 14s ease-in-out infinite alternate;
+  transform: translate3d(-8px, 0, 0) scale(0.96);
 }
 
 #launcher-ember-layer::after {
-  bottom: -68px;
-  left: -42px;
+  right: 32px;
+  bottom: 46px;
   background: radial-gradient(circle, rgba(255, 140, 0, 0.18), transparent 72%);
-  animation: launcher-ember-drift 18s ease-in-out infinite alternate-reverse;
-  animation-delay: 3.5s;
+  transform: translate3d(8px, 0, 0) scale(0.96);
 }
 
 [data-launcher-content="body"] {
