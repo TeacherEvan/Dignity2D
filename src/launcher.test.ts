@@ -57,7 +57,10 @@ describe("launcher layout integration", () => {
     document.querySelector<HTMLButtonElement>("#quick-play-button")?.click();
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(startGameSession).toHaveBeenCalledWith(
-      expect.objectContaining({ layoutId: "desktop-standard" }),
+      expect.objectContaining({
+        layoutId: "desktop-standard",
+        motionMode: "full",
+      }),
     );
   });
 
@@ -254,5 +257,50 @@ describe("launcher layout integration", () => {
     expect(shell?.dataset.motionMode).toBe("reduced");
     expect(document.querySelector("#quick-play-button")).toBeTruthy();
     expect(document.querySelector("#home-status")?.textContent).toBe("Ready");
+  });
+
+  it("keeps reduced motion mode free of transient cue state", async () => {
+    vi.useFakeTimers();
+    vi.mocked(window.matchMedia).mockReturnValue({
+      matches: true,
+      media: "(prefers-reduced-motion: reduce)",
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    });
+
+    try {
+      mountLauncher();
+
+      const shell = document.querySelector<HTMLElement>("#launcher-shell");
+      const status = document.querySelector<HTMLElement>("#home-status");
+      const quickPlayButton = document.querySelector<HTMLButtonElement>(
+        "#quick-play-button",
+      );
+
+      quickPlayButton?.focus();
+      expect(shell?.dataset.activeCue).toBeUndefined();
+      quickPlayButton?.click();
+      await Promise.resolve();
+
+      expect(shell?.dataset.activeCue).toBeUndefined();
+      expect(status?.dataset.emberTone).toBeUndefined();
+
+      await vi.runAllTimersAsync();
+
+      expect(shell?.dataset.activeCue).toBeUndefined();
+      expect(status?.dataset.emberTone).toBeUndefined();
+      expect(startGameSession).toHaveBeenCalledWith(
+        expect.objectContaining({
+          layoutId: "desktop-standard",
+          motionMode: "reduced",
+        }),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
