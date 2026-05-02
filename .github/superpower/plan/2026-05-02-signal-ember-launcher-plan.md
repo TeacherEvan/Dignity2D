@@ -97,3 +97,28 @@ Validation:
 - Secondary risk: an idle ember timer can make the launcher feel busy on mobile.
 - Unknown: whether the strongest response should prioritize Quick Play, the status line, or the upload trigger. Recommended order: Quick Play and status first, upload second.
 - Unknown: whether the reduced-motion branch should keep subtle opacity state changes on focus. Recommended answer: no animated transitions in reduced mode, only static emphasis.
+
+## Follow-up Addendum: Calm Idle Rhythm And Topic Fit
+
+### Task 8: Add a very light idle ember rhythm without increasing interface noise
+**Files:** `src/welcome/WelcomeScreen.css`
+
+Work:
+- Keep the effect CSS-only and subordinate to the existing interaction cues.
+- Use long-duration opacity and drift changes rather than extra bright nodes or more simultaneous events.
+- Preserve the reduced-motion branch by relying on the existing `data-motion-mode="reduced"` guard.
+
+Validation:
+- Run `npm run test -- src/welcome/WelcomeScreen.test.ts src/launcher.test.ts`.
+- Run `npm run build`.
+
+### Task 9: Make launcher copy more topic-appropriate for the territory-capture game
+**Files:** `src/welcome/WelcomeScreen.ts`, `src/welcome/WelcomeScreen.test.ts`
+
+Work:
+- Retune the title and summary so they feel grounded in tracing, holding, or recovering territory rather than generic restoration language.
+- Keep the writing calm, low-density, and easy to scan.
+
+Validation:
+- Run `npm run test -- src/welcome/WelcomeScreen.test.ts`.
+- Run `npm run build`.
