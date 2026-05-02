@@ -1,10 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  BACKEND_REQUIRED_MESSAGE,
   createRoom,
   createRoomSession,
   joinRoom,
   joinRoomSession,
   reconnectRoom,
+  resolveDefaultServerUrl,
   toWebSocketUrl,
   uploadImage,
 } from "./serverApi";
@@ -44,6 +46,39 @@ afterEach(() => {
 });
 
 describe("serverApi", () => {
+  it("uses the configured hosted backend when provided", () => {
+    expect(
+      resolveDefaultServerUrl("https://api.example.test", {
+        origin: "https://app.example.test",
+        hostname: "app.example.test",
+      }),
+    ).toBe("https://api.example.test");
+  });
+
+  it("falls back to the local backend during local development", () => {
+    expect(
+      resolveDefaultServerUrl(undefined, {
+        origin: "http://localhost:5173",
+        hostname: "localhost",
+      }),
+    ).toBe("http://127.0.0.1:8787");
+  });
+
+  it("returns null for hosted builds without an explicit backend", () => {
+    expect(
+      resolveDefaultServerUrl(undefined, {
+        origin: "https://dignity-arcade.vercel.app",
+        hostname: "dignity-arcade.vercel.app",
+      }),
+    ).toBeNull();
+  });
+
+  it("throws a clear error when hosted backend features are unavailable", async () => {
+    await expect(createRoom("img-1", null as never)).rejects.toThrow(
+      BACKEND_REQUIRED_MESSAGE,
+    );
+  });
+
   it("creates rooms over HTTP", async () => {
     fetchMock.mockResolvedValue({
       ok: true,

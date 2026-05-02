@@ -1,5 +1,45 @@
-export const DEFAULT_SERVER_URL =
-  import.meta.env.VITE_SERVER_URL ?? "http://127.0.0.1:8787";
+export const BACKEND_REQUIRED_MESSAGE =
+  "Online rooms and uploads require VITE_SERVER_URL in hosted deployments.";
+
+type LocationLike = {
+  origin: string;
+  hostname: string;
+};
+
+function isLocalHostname(hostname: string): boolean {
+  return (
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname === "0.0.0.0"
+  );
+}
+
+export function resolveDefaultServerUrl(
+  configuredServerUrl = import.meta.env.VITE_SERVER_URL,
+  locationLike: LocationLike | null = typeof window === "undefined"
+    ? null
+    : window.location,
+): string | null {
+  if (configuredServerUrl) {
+    return configuredServerUrl;
+  }
+
+  if (locationLike && isLocalHostname(locationLike.hostname)) {
+    return "http://127.0.0.1:8787";
+  }
+
+  return null;
+}
+
+export const DEFAULT_SERVER_URL = resolveDefaultServerUrl();
+
+function requireServerUrl(serverUrl = DEFAULT_SERVER_URL): string {
+  if (!serverUrl) {
+    throw new Error(BACKEND_REQUIRED_MESSAGE);
+  }
+
+  return serverUrl;
+}
 
 export type RoomCreateResponse = {
   roomId: string;
@@ -40,7 +80,8 @@ export async function createRoom(
   imageId: string,
   serverUrl = DEFAULT_SERVER_URL,
 ): Promise<RoomCreateResponse> {
-  const response = await fetch(`${serverUrl}/rooms`, {
+  const activeServerUrl = requireServerUrl(serverUrl);
+  const response = await fetch(`${activeServerUrl}/rooms`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ imageId }),
@@ -59,7 +100,8 @@ export function reconnectRoom(
   serverUrl = DEFAULT_SERVER_URL,
 ): Promise<number> {
   return new Promise((resolve, reject) => {
-    const socket = new WebSocket(toWebSocketUrl(serverUrl));
+    const activeServerUrl = requireServerUrl(serverUrl);
+    const socket = new WebSocket(toWebSocketUrl(activeServerUrl));
 
     socket.addEventListener("open", () => {
       socket.send(JSON.stringify({ type: "reconnect", roomId, playerId }));
@@ -106,7 +148,8 @@ export async function joinRoom(
   roomId: string,
   serverUrl = DEFAULT_SERVER_URL,
 ): Promise<RoomJoinResponse> {
-  const response = await fetch(`${serverUrl}/rooms/join`, {
+  const activeServerUrl = requireServerUrl(serverUrl);
+  const response = await fetch(`${activeServerUrl}/rooms/join`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ roomId }),
@@ -141,8 +184,9 @@ export async function uploadImage(
   retention: string,
   serverUrl = DEFAULT_SERVER_URL,
 ): Promise<UploadedImage> {
+  const activeServerUrl = requireServerUrl(serverUrl);
   const response = await fetch(
-    `${serverUrl}/upload?retention=${encodeURIComponent(retention)}`,
+    `${activeServerUrl}/upload?retention=${encodeURIComponent(retention)}`,
     {
       method: "POST",
       headers: { "content-type": file.type || "application/octet-stream" },

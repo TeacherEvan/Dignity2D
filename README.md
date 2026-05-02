@@ -55,6 +55,16 @@ npm run server:start
 
 This starts the local HTTP/WebSocket server from `server/main.ts` via `tsx`. The default port is `8787`, configurable with the `PORT` environment variable.
 
+### 4. Configure hosted backend access
+
+For hosted frontend deployments, set `VITE_SERVER_URL` to the base URL of a separately hosted backend.
+
+```bash
+VITE_SERVER_URL=https://your-backend.example.com
+```
+
+Without that variable, hosted builds stay usable for quick play but room creation, joining, and uploads are intentionally unavailable.
+
 ## Available Scripts
 
 ```bash
@@ -141,6 +151,15 @@ npm run server:test
 npm run test:e2e
 npm run lint
 ```
+
+## Vercel Deployment
+
+Vercel is configured for the static Vite frontend in `vercel.json`.
+
+- The frontend can be deployed directly on Vercel.
+- The current Node + `ws` room server is not deployed by Vercel in this repo.
+- Online rooms and uploads require `VITE_SERVER_URL` to point at a separately hosted backend.
+- If `VITE_SERVER_URL` is not set in a hosted environment, the launcher still supports quick play and surfaces a clear backend-required message for online features.
 
 ## Repository Layout
 
