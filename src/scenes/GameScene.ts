@@ -22,12 +22,15 @@ import { getTerritoryStage } from "../progression/territoryProgression";
 import type { GameLaunchData } from "../session";
 import { PALETTE } from "../theme/palette";
 import { getPendingLaunchData } from "../session";
+import { deriveHudFeedback, type HudSnapshot } from "./HudFeedback";
 
 export const BOARD_SIZE = { width: 320, height: 480 } as const;
 
 const PLAYER_ID = "p1";
 const PLAYER_SPEED = 160;
 const ENEMY_RADIUS = 12;
+const HUD_ENTER_DURATION = 260;
+const HUD_PULSE_DURATION = 160;
 
 export type GameSceneFrameInput = {
   direction: Point;
@@ -147,6 +150,27 @@ export function makeSceneLaunchData(data: GameLaunchData): GameLaunchData {
   return { ...data };
 }
 
+export function makeHudSnapshot(
+  state: GameState,
+  launchData: GameLaunchData,
+): HudSnapshot {
+  const player = state.players[0];
+  const territoryStage = getTerritoryStage(state.revealedRatio);
+
+  return {
+    score: player?.score ?? 0,
+    revealedRatio: state.revealedRatio,
+    statusText: makeGameStatusText(
+      launchData,
+      state.won,
+      state.enemies.length,
+      territoryStage.label,
+    ),
+    captureCount: state.captures.length,
+    won: state.won,
+  };
+}
+
 export function makeGameStatusText(
   launchData: GameLaunchData,
   won: boolean,
@@ -181,6 +205,8 @@ export class GameScene extends Phaser.Scene {
   private previewFrame?: Phaser.GameObjects.Rectangle;
   private previewImage?: Phaser.GameObjects.Image;
   private previewLabel?: Phaser.GameObjects.Text;
+  private hudSnapshot: HudSnapshot | null = null;
+  private prefersReducedMotion = false;
 
   constructor() {
     super("GameScene");
@@ -201,6 +227,7 @@ export class GameScene extends Phaser.Scene {
 
   create(): void {
     this.state = createSceneGameState(this.launchData.levelId);
+    this.prefersReducedMotion = this.launchData.motionMode === "reduced";
     this.cursors = this.input.keyboard?.createCursorKeys();
 
     const maskSize = makeMaskResolution(
@@ -276,6 +303,10 @@ export class GameScene extends Phaser.Scene {
         fontSize: "16px",
       },
     );
+
+    if (!this.prefersReducedMotion) {
+      this.playHudEntrance();
+    }
 
     this.input.on("pointermove", (pointer: Phaser.Input.Pointer) => {
       if (!pointer.isDown) return;
@@ -375,18 +406,76 @@ export class GameScene extends Phaser.Scene {
       marker.setPosition(position.x, position.y);
     });
 
+    const nextHudSnapshot = makeHudSnapshot(this.state, this.launchData);
+
     this.revealText?.setText(
-      calculateRevealPercentText(this.state.revealedRatio),
+      calculateRevealPercentText(nextHudSnapshot.revealedRatio),
     );
-    this.scoreText?.setText(`Score ${player.score}`);
-    const territoryStage = getTerritoryStage(this.state.revealedRatio);
-    this.statusText?.setText(
-      makeGameStatusText(
-        this.launchData,
-        this.state.won,
-        this.state.enemies.length,
-        territoryStage.label,
-      ),
+    this.scoreText?.setText(`Score ${nextHudSnapshot.score}`);
+    this.statusText?.setText(nextHudSnapshot.statusText);
+
+    if (!this.prefersReducedMotion) {
+      this.playHudFeedback(deriveHudFeedback(this.hudSnapshot, nextHudSnapshot));
+    }
+
+    this.hudSnapshot = nextHudSnapshot;
+  }
+
+  private playHudEntrance(): void {
+    const hudTexts = [this.revealText, this.scoreText, this.statusText].filter(
+      (text): text is Phaser.GameObjects.Text => Boolean(text),
     );
+
+    hudTexts.forEach((text, index) => {
+      const baseY = text.y;
+      text.setAlpha(0);
+      text.setY(baseY + 6);
+      this.tweens.add({
+        targets: text,
+        alpha: 1,
+        y: baseY,
+        delay: index * 80,
+        duration: HUD_ENTER_DURATION,
+        ease: "Cubic.Out",
+      });
+    });
+  }
+
+  private playHudFeedback(feedback: ReturnType<typeof deriveHudFeedback>): void {
+    if (feedback.pulseReveal || feedback.captureCue) {
+      this.pulseHudText(this.revealText, 1.08);
+    }
+    if (feedback.pulseScore) {
+      this.pulseHudText(this.scoreText, 1.05);
+    }
+    if (feedback.pulseStatus || feedback.captureCue) {
+      this.pulseHudText(this.statusText, 1.04, true);
+    }
+  }
+
+  private pulseHudText(
+    text: Phaser.GameObjects.Text | undefined,
+    scale: number,
+    nudgeUp = false,
+  ): void {
+    if (!text) {
+      return;
+    }
+
+    const baseY = text.y;
+    this.tweens.killTweensOf(text);
+    text.setScale(1);
+    text.setAlpha(1);
+    text.setY(baseY);
+    this.tweens.add({
+      targets: text,
+      scaleX: scale,
+      scaleY: scale,
+      alpha: 0.82,
+      y: nudgeUp ? baseY - 3 : baseY,
+      duration: HUD_PULSE_DURATION,
+      yoyo: true,
+      ease: "Cubic.Out",
+    });
   }
 }

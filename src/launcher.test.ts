@@ -57,7 +57,10 @@ describe("launcher layout integration", () => {
     document.querySelector<HTMLButtonElement>("#quick-play-button")?.click();
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(startGameSession).toHaveBeenCalledWith(
-      expect.objectContaining({ layoutId: "desktop-standard" }),
+      expect.objectContaining({
+        layoutId: "desktop-standard",
+        motionMode: "full",
+      }),
     );
   });
 
@@ -291,7 +294,10 @@ describe("launcher layout integration", () => {
       expect(shell?.dataset.activeCue).toBeUndefined();
       expect(status?.dataset.emberTone).toBeUndefined();
       expect(startGameSession).toHaveBeenCalledWith(
-        expect.objectContaining({ layoutId: "desktop-standard" }),
+        expect.objectContaining({
+          layoutId: "desktop-standard",
+          motionMode: "reduced",
+        }),
       );
     } finally {
       vi.useRealTimers();

@@ -149,6 +149,7 @@ export function mountLauncher(): void {
       imageId: state.selectedImageId,
       imageUrl: state.selectedImageUrl,
       layoutId: resolvedLayoutId,
+      motionMode,
       ...data,
     });
     if (shell) {

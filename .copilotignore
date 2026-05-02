@@ -1,0 +1,22 @@
+# Dependencies and generated output
+node_modules/
+dist/
+dist-server/
+
+# Test and automation artifacts
+coverage/
+playwright-report/
+test-results/
+
+# Local environment and logs
+.env
+.env.*
+!.env.example
+*.log
+
+# Editor and OS metadata
+.vscode/
+.DS_Store
+
+# Large binary assets that do not improve code suggestions
+Images/

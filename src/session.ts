@@ -6,6 +6,7 @@ export type GameLaunchData = {
   imageUrl?: string;
   stateVersion?: number;
   layoutId?: string;
+  motionMode?: "full" | "reduced";
 };
 
 let pendingLaunchData: GameLaunchData = {};

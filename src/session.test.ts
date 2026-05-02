@@ -24,10 +24,12 @@ describe("session", () => {
     setPendingLaunchData({
       imageId: "img-1",
       layoutId: "portrait-phone-standard",
+      motionMode: "reduced",
     });
     expect(getPendingLaunchData()).toEqual({
       imageId: "img-1",
       layoutId: "portrait-phone-standard",
+      motionMode: "reduced",
     });
   });
 });

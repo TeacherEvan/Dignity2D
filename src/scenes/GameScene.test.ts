@@ -10,6 +10,7 @@ import {
   advanceGameState,
   BOARD_SIZE,
   createSceneGameState,
+  makeHudSnapshot,
   makeGameStatusText,
   makeSceneLaunchData,
 } from "./GameScene";
@@ -175,7 +176,38 @@ describe("GameScene helpers", () => {
     const launchData = makeSceneLaunchData({
       imageId: "img-1",
       layoutId: "portrait-phone-standard",
+      motionMode: "reduced",
     });
     expect(launchData.layoutId).toBe("portrait-phone-standard");
+    expect(launchData.motionMode).toBe("reduced");
+  });
+
+  it("builds a HUD snapshot from score, captures, and status text", () => {
+    const state = createSceneGameState();
+    state.players[0] = {
+      ...state.players[0],
+      score: 240,
+    };
+    state.revealedRatio = 0.28;
+    state.captures = [
+      {
+        id: "capture-1",
+        polygon: [
+          { x: 0, y: 0 },
+          { x: 20, y: 0 },
+          { x: 20, y: 20 },
+          { x: 0, y: 20 },
+        ],
+        area: 400,
+      },
+    ];
+
+    expect(makeHudSnapshot(state, {})).toEqual({
+      score: 240,
+      revealedRatio: 0.28,
+      statusText: "Safe Quarter",
+      captureCount: 1,
+      won: false,
+    });
   });
 });
