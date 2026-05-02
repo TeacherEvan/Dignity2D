@@ -1,4 +1,8 @@
-import { getStandardLayout } from "./display/DeviceLayout";
+import "./welcome/WelcomeScreen.css";
+import {
+  getStandardLayout,
+  resolveLayoutWithPreference,
+} from "./display/DeviceLayout";
 import { readDisplayProfileFromWindow } from "./display/DisplayProfile";
 import { loadLayoutPreference } from "./display/LayoutPreferences";
 import type { GameLaunchData } from "./session";
@@ -26,6 +30,16 @@ function formatRoomFailureStatus(error: unknown, action: "join" | "create"): str
     : "Room setup failed.";
 }
 
+function resolveMotionMode(): "full" | "reduced" {
+  if (typeof window.matchMedia !== "function") {
+    return "full";
+  }
+
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ? "reduced"
+    : "full";
+}
+
 export function mountLauncher(): void {
   const app = document.createElement("div");
   app.id = "app-shell";
@@ -40,12 +54,14 @@ export function mountLauncher(): void {
   const displayProfile = readDisplayProfileFromWindow();
   const layout = getStandardLayout(displayProfile);
   const savedLayout = loadLayoutPreference(displayProfile.deviceClass);
-  const resolvedLayoutId = savedLayout?.layoutId ?? layout.id;
+  const resolvedLayout = resolveLayoutWithPreference(displayProfile, savedLayout);
+  const resolvedLayoutId = resolvedLayout.id;
 
   const shell = document.querySelector<HTMLElement>("#launcher-shell");
   if (shell) {
     shell.dataset.deviceClass = displayProfile.deviceClass;
     shell.dataset.layoutId = resolvedLayoutId;
+    shell.dataset.motionMode = resolveMotionMode();
   }
 
   const status = document.querySelector<HTMLParagraphElement>("#home-status");
@@ -61,9 +77,50 @@ export function mountLauncher(): void {
   const returnButton = document.querySelector<HTMLButtonElement>(
     "#return-to-launcher-button",
   );
+  const quickPlayButton = document.querySelector<HTMLButtonElement>(
+    "#quick-play-button",
+  );
+  const createRoomButton = document.querySelector<HTMLButtonElement>(
+    "#create-room-button",
+  );
+  const joinRoomButton = document.querySelector<HTMLButtonElement>(
+    "#join-room-button",
+  );
+  const uploadTriggerButton = document.querySelector<HTMLButtonElement>(
+    "#upload-trigger-button",
+  );
 
-  const setStatus = (message: string): void => {
+  let activeCueTimer = 0;
+  let statusToneTimer = 0;
+
+  const setActiveCue = (cue: string): void => {
+    if (!shell) return;
+
+    shell.dataset.activeCue = cue;
+    window.clearTimeout(activeCueTimer);
+    activeCueTimer = window.setTimeout(() => {
+      if (shell.dataset.activeCue === cue) {
+        delete shell.dataset.activeCue;
+      }
+    }, 1200);
+  };
+
+  const setStatusTone = (tone: "warm" | "cool"): void => {
+    if (!status) return;
+
+    status.dataset.emberTone = tone;
+    setActiveCue("status");
+    window.clearTimeout(statusToneTimer);
+    statusToneTimer = window.setTimeout(() => {
+      if (status.dataset.emberTone === tone) {
+        delete status.dataset.emberTone;
+      }
+    }, 1400);
+  };
+
+  const setStatus = (message: string, tone: "warm" | "cool" = "warm"): void => {
     if (status) status.textContent = message;
+    setStatusTone(tone);
   };
 
   const updateRoomLabel = (message?: string): void => {
@@ -83,6 +140,7 @@ export function mountLauncher(): void {
   const startGame = async (data: GameLaunchData): Promise<void> => {
     setStatus(
       state.roomId ? `Launching ${state.roomId}...` : "Launching game...",
+      "cool",
     );
     const { startGameSession } = await import("./bootstrap");
     await startGameSession({
@@ -106,12 +164,30 @@ export function mountLauncher(): void {
       shell.style.display = "block";
     }
     returnButton.style.display = "none";
-    setStatus("Ready");
+    setStatus("Ready", "cool");
   });
 
-  document
-    .querySelector<HTMLButtonElement>("#quick-play-button")
-    ?.addEventListener("click", () => {
+  const bindCue = (
+    element: HTMLButtonElement | null,
+    cue: string,
+  ): void => {
+    if (!element) return;
+
+    const activateCue = () => {
+      setActiveCue(cue);
+    };
+
+    element.addEventListener("pointerenter", activateCue);
+    element.addEventListener("focus", activateCue);
+    element.addEventListener("click", activateCue);
+  };
+
+  bindCue(quickPlayButton, "quick-play");
+  bindCue(createRoomButton, "create-room");
+  bindCue(joinRoomButton, "join-room");
+  bindCue(uploadTriggerButton, "upload");
+
+  quickPlayButton?.addEventListener("click", () => {
       void startGame({
         imageId: state.selectedImageId,
         imageUrl: state.selectedImageUrl,
@@ -119,9 +195,7 @@ export function mountLauncher(): void {
       });
     });
 
-  document
-    .querySelector<HTMLButtonElement>("#create-room-button")
-    ?.addEventListener("click", async () => {
+  createRoomButton?.addEventListener("click", async () => {
       setStatus("Creating room...");
       try {
         const { createRoomSession } = await import("./net/serverApi");
@@ -153,9 +227,7 @@ export function mountLauncher(): void {
       }
     });
 
-  document
-    .querySelector<HTMLButtonElement>("#join-room-button")
-    ?.addEventListener("click", async () => {
+  joinRoomButton?.addEventListener("click", async () => {
       const roomId = roomInput?.value.trim() ?? "";
       if (!roomId) {
         setStatus("Enter a room ID first.");
@@ -187,9 +259,7 @@ export function mountLauncher(): void {
       }
     });
 
-  document
-    .querySelector<HTMLButtonElement>("#upload-trigger-button")
-    ?.addEventListener("click", () => {
+  uploadTriggerButton?.addEventListener("click", () => {
       uploadInput?.click();
     });
 
@@ -198,7 +268,7 @@ export function mountLauncher(): void {
     if (!file) return;
 
     void (async () => {
-      setStatus("Validating upload...");
+      setStatus("Validating upload...", "cool");
       try {
         const [{ isAcceptedImageType, validateUploadSize }, { uploadImage }] =
           await Promise.all([
@@ -224,9 +294,13 @@ export function mountLauncher(): void {
         showPreview(state.selectedImageUrl, file.name);
         setStatus(
           `Upload ready (${uploaded.bytes} bytes, ${uploaded.retention}).`,
+          "cool",
         );
       } catch (error) {
-        setStatus(error instanceof Error ? error.message : "Upload failed.");
+        setStatus(
+          error instanceof Error ? error.message : "Upload failed.",
+          "warm",
+        );
       } finally {
         uploadInput.value = "";
       }

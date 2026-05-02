@@ -30,8 +30,13 @@ describe("createWelcomeScreenHtml", () => {
 
   it("keeps calm welcome copy visible", () => {
     document.body.innerHTML = createWelcomeScreenHtml();
-    expect(document.querySelector("#welcome-title")?.textContent).toContain(
-      "Reveal",
+    expect(document.querySelector("#welcome-title")?.textContent).toBe(
+      "Trace the line. Hold the ground.",
+    );
+    expect(
+      document.querySelector('[data-launcher-copy-role="summary"]')?.textContent,
+    ).toBe(
+      "Play solo, open a room, join a friend, or bring a private image into the run.",
     );
     expect(document.querySelector("#home-status")?.textContent).toBe("Ready");
   });
@@ -42,5 +47,49 @@ describe("createWelcomeScreenHtml", () => {
     expect(status?.getAttribute("role")).toBe("status");
     expect(status?.getAttribute("aria-live")).toBe("polite");
     expect(status?.getAttribute("aria-atomic")).toBe("true");
+  });
+
+  it("renders join controls with clear defaults", () => {
+    document.body.innerHTML = createWelcomeScreenHtml();
+    const input = document.querySelector<HTMLInputElement>("#room-id-input");
+
+    expect(input?.getAttribute("placeholder")).toBe("room-1");
+    expect(document.querySelector("#current-room-label")?.textContent).toBe(
+      "No room created yet.",
+    );
+  });
+
+  it("keeps upload controls private until the player chooses an image", () => {
+    document.body.innerHTML = createWelcomeScreenHtml();
+    const uploadInput = document.querySelector<HTMLInputElement>("#upload-input");
+    const preview = document.querySelector<HTMLImageElement>("#upload-preview");
+
+    expect(uploadInput?.getAttribute("accept")).toBe(
+      "image/png,image/jpeg,image/webp",
+    );
+    expect(preview?.style.display).toBe("none");
+    expect(document.querySelector("#upload-filename")?.textContent).toBe(
+      "Using default hidden image.",
+    );
+  });
+
+  it("keeps the return control hidden until a game starts", () => {
+    document.body.innerHTML = createWelcomeScreenHtml();
+    expect(
+      document.querySelector<HTMLButtonElement>("#return-to-launcher-button")
+        ?.style.display,
+    ).toBe("none");
+  });
+
+  it("renders a dedicated ember layer and stable launcher hooks", () => {
+    document.body.innerHTML = createWelcomeScreenHtml();
+
+    expect(document.querySelector("#launcher-ember-layer")).toBeTruthy();
+    expect(
+      document.querySelector('[data-launcher-actions="primary"]'),
+    ).toBeTruthy();
+    expect(
+      document.querySelector('[data-launcher-status-region="home"]'),
+    ).toBeTruthy();
   });
 });
