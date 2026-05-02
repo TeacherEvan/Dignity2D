@@ -1,3 +1,5 @@
+import type { UploadRetention } from "../upload/ImagePicker";
+
 export const BACKEND_REQUIRED_MESSAGE =
   "Online rooms and uploads require VITE_SERVER_URL in hosted deployments.";
 
@@ -6,6 +8,26 @@ const PLACEHOLDER_SERVER_URL = "https://your-backend.example.com";
 type LocationLike = {
   origin: string;
   hostname: string;
+};
+
+type RawImageMetadata = {
+  imageId: string;
+  imagePath: string | null;
+  bytes: number | null;
+  retention: string | null;
+};
+
+type RawUploadedImage = {
+  imageId: string;
+  imagePath: string;
+  retention: string;
+  bytes: number;
+};
+
+type RawRoomResponse = RawImageMetadata & {
+  roomId: string;
+  playerId: string;
+  playerCount: number;
 };
 
 function isLocalHostname(hostname: string): boolean {
@@ -75,9 +97,61 @@ export type RoomJoinResponse = {
 export type UploadedImage = {
   imageId: string;
   imageUrl: string;
-  retention: string;
+  retention: UploadRetention;
   bytes: number;
 };
+
+function resolvePrivateImageUrl(
+  imagePath: string | null,
+  serverUrl: string,
+): string | null {
+  if (!imagePath) {
+    return null;
+  }
+
+  return new URL(imagePath, serverUrl).toString();
+}
+
+async function readErrorMessage(
+  response: Response,
+  fallbackMessage: string,
+): Promise<string> {
+  try {
+    const payload = (await response.json()) as { error?: unknown };
+    return typeof payload.error === "string" && payload.error.length > 0
+      ? payload.error
+      : fallbackMessage;
+  } catch {
+    return fallbackMessage;
+  }
+}
+
+function mapRoomResponse(
+  response: RawRoomResponse,
+  serverUrl: string,
+): RoomCreateResponse {
+  return {
+    roomId: response.roomId,
+    playerId: response.playerId,
+    playerCount: response.playerCount,
+    imageId: response.imageId,
+    imageUrl: resolvePrivateImageUrl(response.imagePath, serverUrl),
+    bytes: response.bytes,
+    retention: response.retention,
+  };
+}
+
+function mapUploadedImage(
+  response: RawUploadedImage,
+  serverUrl: string,
+): UploadedImage {
+  return {
+    imageId: response.imageId,
+    imageUrl: new URL(response.imagePath, serverUrl).toString(),
+    retention: response.retention as UploadRetention,
+    bytes: response.bytes,
+  };
+}
 
 export function toWebSocketUrl(baseUrl: string): string {
   return baseUrl.replace(/^http/i, "ws");
@@ -95,10 +169,10 @@ export async function createRoom(
   });
 
   if (!response.ok) {
-    throw new Error("Failed to create room.");
+    throw new Error(await readErrorMessage(response, "Failed to create room."));
   }
 
-  return (await response.json()) as RoomCreateResponse;
+  return mapRoomResponse((await response.json()) as RawRoomResponse, activeServerUrl);
 }
 
 export function reconnectRoom(
@@ -163,10 +237,10 @@ export async function joinRoom(
   });
 
   if (!response.ok) {
-    throw new Error("Failed to join room.");
+    throw new Error(await readErrorMessage(response, "Failed to join room."));
   }
 
-  return (await response.json()) as RoomJoinResponse;
+  return mapRoomResponse((await response.json()) as RawRoomResponse, activeServerUrl);
 }
 
 export async function joinRoomSession(
@@ -188,7 +262,7 @@ export async function joinRoomSession(
 
 export async function uploadImage(
   file: Blob,
-  retention: string,
+  retention: UploadRetention,
   serverUrl = DEFAULT_SERVER_URL,
 ): Promise<UploadedImage> {
   const activeServerUrl = requireServerUrl(serverUrl);
@@ -202,8 +276,11 @@ export async function uploadImage(
   );
 
   if (!response.ok) {
-    throw new Error("Failed to upload image.");
+    throw new Error(await readErrorMessage(response, "Failed to upload image."));
   }
 
-  return (await response.json()) as UploadedImage;
+  return mapUploadedImage(
+    (await response.json()) as RawUploadedImage,
+    activeServerUrl,
+  );
 }

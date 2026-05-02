@@ -18,7 +18,7 @@ This repo is best described as a well-tested gameplay foundation with an active 
 
 - Mobile web is the primary target, with a portrait-first play surface.
 - The app is guest-friendly by default: quick play and room flows do not require accounts.
-- Uploads are privacy-first, with session retention as the default and metadata stripped during processing.
+- Uploads are privacy-first, with signed private image paths resolved by the client, session retention as the default, and metadata stripped during processing.
 - Competitive fairness is expected to come from normalized ranked templates rather than unrestricted build power.
 
 ## Stack
@@ -108,7 +108,8 @@ Core rules stay outside Phaser wherever possible:
 - `server/index.ts` exposes the HTTP and WebSocket application.
 - `server/main.ts` starts the server process.
 - `server/rooms/` owns room lifecycle and co-op validation.
-- `server/upload/` owns retention policy and image transformation.
+- `server/upload/` owns retention policy, the server-side upload size cap, and image transformation.
+- `server/ImageStore.ts` issues signed private image paths and expires uploads from the in-memory store when their retention window closes.
 - `shared/protocol.ts` defines typed messages shared by client and server.
 
 ## HTTP Endpoints
@@ -118,7 +119,7 @@ The server currently exposes these routes:
 - `GET /health` returns a simple health payload.
 - `POST /rooms` creates a room. Optional JSON body: `{ "imageId": "..." }`.
 - `POST /rooms/join` joins a room. JSON body: `{ "roomId": "..." }`.
-- `POST /upload?retention=session|7-days|30-days` transforms an uploaded image into private WebP output with stripped metadata.
+- `POST /upload?retention=session|N-days` transforms an uploaded image into signed private WebP output with stripped metadata, accepts day-based retention windows up to 30 days, and enforces the server-side 10 MB upload limit.
 
 ## WebSocket Messages
 
@@ -178,7 +179,9 @@ dist-server/ Compiled server output
 
 ## Notes
 
-- Upload output is private by default, metadata-stripped, and normalized to WebP.
+- Upload output is private by default through signed image URLs, metadata-stripped, and normalized to WebP.
+- The current in-memory upload store enforces maximum retention lifetimes while the server is running; a server restart clears uploads sooner than the configured retention window.
+- Both client and server enforce the 10 MB upload limit; the server remains the source of truth for request rejection.
 - The architecture favors pure modules first, with Phaser used mainly as the presentation and orchestration layer.
 - The codebase includes both client and server test suites, so narrow checks are usually available before broader integration work.
 - The main next-quality step is polish: better gameplay presentation, stronger onboarding/feedback, and tighter visual cohesion between the launcher and Phaser runtime.

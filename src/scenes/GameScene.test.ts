@@ -52,6 +52,51 @@ describe("GameScene helpers", () => {
     expect(completed.players[0]?.score).toBeGreaterThan(0);
   });
 
+  it("does not score already revealed overlap twice", () => {
+    const state = createSceneGameState();
+    state.enemies = [];
+    state.captures = [
+      {
+        id: "capture-1",
+        polygon: [
+          { x: 0, y: 0 },
+          { x: 20, y: 0 },
+          { x: 20, y: 20 },
+          { x: 0, y: 20 },
+        ],
+        area: 400,
+      },
+    ];
+    state.revealedRatio = 400 / (BOARD_SIZE.width * BOARD_SIZE.height);
+    state.players[0] = {
+      ...state.players[0],
+      position: { x: 10, y: 20 },
+      lastSafePosition: { x: 10, y: 10 },
+      mode: "drawing",
+      score: 50,
+      activeTrail: {
+        playerId: "p1",
+        startedAt: 0,
+        points: [
+          { x: 10, y: 10 },
+          { x: 30, y: 10 },
+          { x: 30, y: 20 },
+          { x: 10, y: 20 },
+        ],
+      },
+    };
+
+    const completed = advanceGameState(state, {
+      direction: { x: 0, y: -0.5 },
+      deltaMs: 125,
+      now: 125,
+    });
+
+    expect(completed.captures).toHaveLength(2);
+    expect(completed.captures[1]?.area).toBe(100);
+    expect(completed.players[0]?.score).toBe(200);
+  });
+
   it("cancels an active trail when an enemy crosses it", () => {
     const state = createSceneGameState();
     state.players[0] = {

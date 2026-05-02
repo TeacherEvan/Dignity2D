@@ -5,8 +5,15 @@ vi.mock("./bootstrap", () => ({
   stopGameSession: vi.fn(),
 }));
 
+vi.mock("./net/serverApi", () => ({
+  createRoomSession: vi.fn(),
+  joinRoomSession: vi.fn(),
+  uploadImage: vi.fn(),
+}));
+
 import { mountLauncher } from "./launcher";
 import { startGameSession } from "./bootstrap";
+import { joinRoomSession } from "./net/serverApi";
 
 describe("launcher layout integration", () => {
   beforeEach(() => {
@@ -36,6 +43,26 @@ describe("launcher layout integration", () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(startGameSession).toHaveBeenCalledWith(
       expect.objectContaining({ layoutId: "desktop-standard" }),
+    );
+  });
+
+  it("shows short join failure status text", async () => {
+    vi.mocked(joinRoomSession).mockRejectedValue(
+      new Error("Room not found or full."),
+    );
+
+    mountLauncher();
+    const input = document.querySelector<HTMLInputElement>("#room-id-input");
+    if (!input) {
+      throw new Error("room input missing in test");
+    }
+    input.value = "room-missing";
+
+    document.querySelector<HTMLButtonElement>("#join-room-button")?.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(document.querySelector("#home-status")?.textContent).toBe(
+      "Join failed. Room is full.",
     );
   });
 });

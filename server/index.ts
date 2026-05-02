@@ -12,10 +12,16 @@ import {
 } from "../shared/protocol";
 import { ImageStore } from "./ImageStore";
 import { RoomManager } from "./rooms/RoomManager";
-import { normalizeRetention, buildUploadPolicy } from "./upload/processImage";
+import {
+  MAX_UPLOAD_BYTES,
+  normalizeRetention,
+  buildUploadPolicy,
+} from "./upload/processImage";
 import { transformImage } from "./upload/transformImage";
 
 type JsonValue = Record<string, unknown>;
+
+const MAX_JSON_BYTES = 8 * 1024;
 
 const CORS_HEADERS = {
   "access-control-allow-origin": "*",
@@ -30,23 +36,16 @@ export type AppServer = {
   getUrl: () => string;
 };
 
-function getBaseUrl(request: IncomingMessage): string {
-  const origin = request.headers.origin;
-  if (origin) {
-    return origin;
-  }
-
-  const host = request.headers.host ?? "127.0.0.1";
-  return `http://${host}`;
+function buildSignedImagePath(imageId: string, accessToken: string): string {
+  return `/images/${imageId}?token=${accessToken}`;
 }
 
 function buildImageMetadata(
   imageStore: ImageStore,
   imageId: string,
-  baseUrl: string,
 ): {
   imageId: string;
-  imageUrl: string | null;
+  imagePath: string | null;
   bytes: number | null;
   retention: string | null;
 } {
@@ -54,7 +53,7 @@ function buildImageMetadata(
   if (!stored) {
     return {
       imageId,
-      imageUrl: null,
+      imagePath: null,
       bytes: null,
       retention: null,
     };
@@ -62,7 +61,7 @@ function buildImageMetadata(
 
   return {
     imageId,
-    imageUrl: `${baseUrl}/images/${stored.id}`,
+    imagePath: buildSignedImagePath(stored.id, stored.accessToken),
     bytes: stored.bytes,
     retention: stored.retention,
   };
@@ -80,19 +79,51 @@ function writeJson(
   response.end(JSON.stringify(body));
 }
 
-function readBody(request: IncomingMessage): Promise<Buffer> {
+class RequestTooLargeError extends Error {
+  constructor(readonly clientMessage: string) {
+    super(clientMessage);
+  }
+}
+
+function readBody(
+  request: IncomingMessage,
+  maxBytes = Number.POSITIVE_INFINITY,
+  clientMessage = "Request body exceeds size limit.",
+): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
-    request.on("data", (chunk) =>
-      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)),
-    );
-    request.on("end", () => resolve(Buffer.concat(chunks)));
+    let totalBytes = 0;
+    let exceededLimit = false;
+
+    request.on("data", (chunk) => {
+      if (exceededLimit) {
+        return;
+      }
+
+      const bufferChunk = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+      totalBytes += bufferChunk.length;
+      if (totalBytes > maxBytes) {
+        exceededLimit = true;
+        reject(new RequestTooLargeError(clientMessage));
+        return;
+      }
+      chunks.push(bufferChunk);
+    });
+    request.on("end", () => {
+      if (!exceededLimit) {
+        resolve(Buffer.concat(chunks));
+      }
+    });
     request.on("error", reject);
   });
 }
 
 async function readJsonBody(request: IncomingMessage): Promise<JsonValue> {
-  const raw = await readBody(request);
+  const raw = await readBody(
+    request,
+    MAX_JSON_BYTES,
+    "Request body exceeds size limit.",
+  );
   if (raw.length === 0) {
     return {};
   }
@@ -111,7 +142,6 @@ export function createAppServer(): AppServer {
   const imageStore = new ImageStore();
   const httpServer = createServer(async (request, response) => {
     const requestUrl = new URL(request.url ?? "/", "http://127.0.0.1");
-    const baseUrl = getBaseUrl(request);
 
     try {
       if (request.method === "OPTIONS") {
@@ -130,7 +160,8 @@ export function createAppServer(): AppServer {
         requestUrl.pathname.startsWith("/images/")
       ) {
         const imageId = requestUrl.pathname.replace("/images/", "");
-        const stored = imageStore.get(imageId);
+        const token = requestUrl.searchParams.get("token") ?? "";
+        const stored = imageStore.getAuthorized(imageId, token);
         if (!stored) {
           writeJson(response, 404, { error: "Image not found." });
           return;
@@ -150,7 +181,7 @@ export function createAppServer(): AppServer {
         const imageId =
           typeof body.imageId === "string" ? body.imageId : "default-image";
         const room = roomManager.createRoom(imageId);
-        const image = buildImageMetadata(imageStore, room.imageId, baseUrl);
+        const image = buildImageMetadata(imageStore, room.imageId);
         writeJson(response, 201, {
           roomId: room.id,
           playerId: room.players[0]?.id ?? null,
@@ -168,7 +199,7 @@ export function createAppServer(): AppServer {
           writeJson(response, 404, { error: "Room not found or full." });
           return;
         }
-        const image = buildImageMetadata(imageStore, room.imageId, baseUrl);
+        const image = buildImageMetadata(imageStore, room.imageId);
         writeJson(response, 200, {
           roomId: room.id,
           playerId: room.players[room.players.length - 1]?.id ?? null,
@@ -183,7 +214,11 @@ export function createAppServer(): AppServer {
           requestUrl.searchParams.get("retention") ?? "session",
         );
         const policy = buildUploadPolicy(retention);
-        const source = await readBody(request);
+        const source = await readBody(
+          request,
+          MAX_UPLOAD_BYTES,
+          "Upload exceeds server size limit.",
+        );
         if (source.length === 0) {
           writeJson(response, 400, { error: "Upload body is empty." });
           return;
@@ -202,7 +237,7 @@ export function createAppServer(): AppServer {
         const stored = imageStore.save(output, retention);
         writeJson(response, 200, {
           imageId: stored.id,
-          imageUrl: `${baseUrl}/images/${stored.id}`,
+          imagePath: buildSignedImagePath(stored.id, stored.accessToken),
           retention,
           bytes: stored.bytes,
         });
@@ -210,7 +245,11 @@ export function createAppServer(): AppServer {
       }
 
       writeJson(response, 404, { error: "Not found." });
-    } catch {
+    } catch (error) {
+      if (error instanceof RequestTooLargeError) {
+        writeJson(response, 413, { error: error.clientMessage });
+        return;
+      }
       writeJson(response, 500, { error: "Internal server error." });
     }
   });
@@ -309,6 +348,7 @@ export function createAppServer(): AppServer {
       return address.port;
     },
     async close(): Promise<void> {
+      imageStore.dispose();
       await new Promise<void>((resolve, reject) => {
         webSocketServer.close((socketError) => {
           if (socketError) {

@@ -6,7 +6,7 @@ import {
   circleHitsPolyline,
 } from "../game/collision";
 import { createEnemyWave } from "../enemies/EnemySpawner";
-import { calculateCaptureScore, hasWon } from "../game/scoring";
+import { awardCaptureScore } from "../game/scoring";
 import {
   createInitialGameState,
   type EnemyState,
@@ -71,29 +71,6 @@ function stepEnemies(
   });
 }
 
-function awardCaptureScore(
-  state: GameState,
-  playerId: string,
-  captureArea: number,
-): GameState {
-  const score = calculateCaptureScore({
-    area: captureArea,
-    dangerMultiplier: 1 + state.enemies.length * 0.1,
-    streak: state.captures.length,
-    coOpBonus: 0,
-  });
-
-  return {
-    ...state,
-    won: hasWon(state.revealedRatio),
-    players: state.players.map((player) =>
-      player.id === playerId
-        ? { ...player, score: player.score + score }
-        : player,
-    ),
-  };
-}
-
 export function createSceneGameState(levelId = "solo-default"): GameState {
   const state = createInitialGameState(
     levelId,
@@ -143,18 +120,10 @@ export function advanceGameState(
     movedPlayer.mode === "safe" &&
     movedPlayer.activeTrail
   ) {
-    const polygon = movedPlayer.activeTrail.points.slice(0, -1);
-    const captureArea =
-      polygon.length >= 3
-        ? Math.abs(
-            polygon.reduce((sum, point, index) => {
-              const nextPoint = polygon[(index + 1) % polygon.length];
-              return sum + point.x * nextPoint.y - nextPoint.x * point.y;
-            }, 0),
-          ) / 2
-        : 0;
+    const captureCount = nextState.captures.length;
     nextState = commitCaptureFromTrail(nextState, movedPlayer.activeTrail);
-    if (captureArea > 0) {
+    if (nextState.captures.length > captureCount) {
+      const captureArea = nextState.captures.at(-1)?.area ?? 0;
       nextState = awardCaptureScore(nextState, playerId, captureArea);
     }
   }

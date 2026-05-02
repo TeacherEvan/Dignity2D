@@ -1,4 +1,4 @@
-export type UploadRetention = "session" | "7-days" | "30-days";
+export type UploadRetention = "session" | `${number}-days`;
 
 export const DEFAULT_RETENTION: UploadRetention = "session";
 export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;

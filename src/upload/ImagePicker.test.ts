@@ -2,12 +2,18 @@ import { describe, expect, it } from "vitest";
 import {
   DEFAULT_RETENTION,
   isAcceptedImageType,
+  type UploadRetention,
   validateUploadSize,
 } from "./ImagePicker";
 
 describe("ImagePicker", () => {
   it("defaults retention to session only", () => {
     expect(DEFAULT_RETENTION).toBe("session");
+  });
+
+  it("allows day-based retention selections", () => {
+    const retention: UploadRetention = "14-days";
+    expect(retention).toBe("14-days");
   });
 
   it("accepts png jpeg and webp", () => {

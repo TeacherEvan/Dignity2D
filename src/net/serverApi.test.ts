@@ -96,7 +96,7 @@ describe("serverApi", () => {
         playerId: "p1",
         playerCount: 1,
         imageId: "img-1",
-        imageUrl: null,
+        imagePath: null,
         bytes: null,
         retention: null,
       }),
@@ -130,7 +130,7 @@ describe("serverApi", () => {
         playerId: "p2",
         playerCount: 1,
         imageId: "img-2",
-        imageUrl: "http://example.test/images/image-2",
+        imagePath: "/images/image-2?token=token-2",
         bytes: 12,
         retention: "session",
       }),
@@ -155,21 +155,23 @@ describe("serverApi", () => {
       ok: true,
       json: async () => ({
         imageId: "image-1",
-        imageUrl: "http://example.test/images/image-1",
-        retention: "session",
+        imagePath: "/images/image-1?token=token-1",
+        retention: "14-days",
         bytes: 3,
       }),
     });
 
     const result = await uploadImage(
       new Blob([new Uint8Array([9, 8, 7])], { type: "image/png" }),
-      "session",
+      "14-days",
       "http://example.test",
     );
 
-    expect(result.retention).toBe("session");
+    expect(result.retention).toBe("14-days");
     expect(result.bytes).toBe(3);
-    expect(result.imageUrl).toContain("/images/image-1");
+    expect(result.imageUrl).toBe(
+      "http://example.test/images/image-1?token=token-1",
+    );
   });
 
   it("joins rooms over HTTP", async () => {
@@ -180,7 +182,7 @@ describe("serverApi", () => {
         playerId: "p2",
         playerCount: 2,
         imageId: "image-8",
-        imageUrl: "http://example.test/images/image-8",
+        imagePath: "/images/image-8?token=token-8",
         bytes: 44,
         retention: "session",
       }),
@@ -202,7 +204,7 @@ describe("serverApi", () => {
         playerId: "p2",
         playerCount: 2,
         imageId: "image-9",
-        imageUrl: "http://example.test/images/image-9",
+        imagePath: "/images/image-9?token=token-9",
         bytes: 55,
         retention: "session",
       }),
@@ -221,6 +223,17 @@ describe("serverApi", () => {
       playerId: "p2",
       stateVersion: 7,
     });
+  });
+
+  it("surfaces backend join errors from the response body", async () => {
+    fetchMock.mockResolvedValue({
+      ok: false,
+      json: async () => ({ error: "Room not found or full." }),
+    });
+
+    await expect(joinRoom("room-missing", "http://example.test")).rejects.toThrow(
+      "Room not found or full.",
+    );
   });
 
   it("converts http URLs to websocket URLs", () => {

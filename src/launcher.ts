@@ -11,6 +11,21 @@ type LauncherState = {
   selectedFileName?: string;
 };
 
+function formatRoomFailureStatus(error: unknown, action: "join" | "create"): string {
+  if (error instanceof Error) {
+    if (error.message.includes("VITE_SERVER_URL")) {
+      return "Online rooms need the backend.";
+    }
+    if (action === "join" && error.message.toLowerCase().includes("full")) {
+      return "Join failed. Room is full.";
+    }
+  }
+
+  return action === "join"
+    ? "Join failed. Check the room ID."
+    : "Room setup failed.";
+}
+
 export function mountLauncher(): void {
   const app = document.createElement("div");
   app.id = "app-shell";
@@ -134,9 +149,7 @@ export function mountLauncher(): void {
           layoutId: resolvedLayoutId,
         });
       } catch (error) {
-        setStatus(
-          error instanceof Error ? error.message : "Room creation failed.",
-        );
+        setStatus(formatRoomFailureStatus(error, "create"));
       }
     });
 
@@ -170,7 +183,7 @@ export function mountLauncher(): void {
           layoutId: resolvedLayoutId,
         });
       } catch (error) {
-        setStatus(error instanceof Error ? error.message : "Join failed.");
+        setStatus(formatRoomFailureStatus(error, "join"));
       }
     });
 

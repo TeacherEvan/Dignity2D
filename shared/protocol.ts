@@ -25,16 +25,63 @@ export type ServerMessage =
     }
   | { type: "error"; message: string };
 
-export function isClientMessage(value: unknown): value is ClientMessage {
-  if (!value || typeof value !== "object") return false;
-  const type = (value as { type?: unknown }).type;
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object";
+}
+
+function isString(value: unknown): value is string {
+  return typeof value === "string" && value.length > 0;
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function isPoint(value: unknown): value is Point {
   return (
-    type === "create-room" ||
-    type === "join-room" ||
-    type === "input-frame" ||
-    type === "capture-proposal" ||
-    type === "reconnect"
+    isRecord(value) &&
+    isFiniteNumber(value.x) &&
+    isFiniteNumber(value.y)
   );
+}
+
+function isTrail(value: unknown): value is Trail {
+  return (
+    isRecord(value) &&
+    isString(value.playerId) &&
+    isFiniteNumber(value.startedAt) &&
+    Array.isArray(value.points) &&
+    value.points.length > 0 &&
+    value.points.every((point) => isPoint(point))
+  );
+}
+
+export function isClientMessage(value: unknown): value is ClientMessage {
+  if (!isRecord(value)) return false;
+
+  switch (value.type) {
+    case "create-room":
+      return isString(value.imageId);
+    case "join-room":
+      return isString(value.roomId);
+    case "input-frame":
+      return (
+        isString(value.roomId) &&
+        isString(value.playerId) &&
+        isPoint(value.direction) &&
+        isFiniteNumber(value.sequence)
+      );
+    case "capture-proposal":
+      return (
+        isString(value.roomId) &&
+        isString(value.playerId) &&
+        isTrail(value.trail)
+      );
+    case "reconnect":
+      return isString(value.roomId) && isString(value.playerId);
+    default:
+      return false;
+  }
 }
 
 export function makeRoomCreated(roomId: string): ServerMessage {

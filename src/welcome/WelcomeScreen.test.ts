@@ -35,4 +35,12 @@ describe("createWelcomeScreenHtml", () => {
     );
     expect(document.querySelector("#home-status")?.textContent).toBe("Ready");
   });
+
+  it("announces launcher status updates to assistive technology", () => {
+    document.body.innerHTML = createWelcomeScreenHtml();
+    const status = document.querySelector("#home-status");
+    expect(status?.getAttribute("role")).toBe("status");
+    expect(status?.getAttribute("aria-live")).toBe("polite");
+    expect(status?.getAttribute("aria-atomic")).toBe("true");
+  });
 });

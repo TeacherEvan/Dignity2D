@@ -67,7 +67,8 @@ The architecture assumes gameplay remains readable even if shader-based polish i
 Upload behavior is intentionally privacy-first:
 
 - `src/upload/ImagePicker.ts` limits accepted file types and enforces a 10 MB client-side size cap.
-- `server/upload/processImage.ts` normalizes retention windows, keeps uploads non-public, strips metadata, and converts output to WebP.
+- `server/upload/processImage.ts` normalizes retention windows, strips metadata, enforces the server-side upload size cap, and converts output to WebP.
+- `server/ImageStore.ts` issues signed image access tokens and expires in-memory uploads when their retention window closes.
 - `server/upload/transformImage.ts` is the image-processing hook used by server-side tests and future API wiring.
 
 ### 6. Online Co-op Foundations
@@ -127,3 +128,5 @@ The repo has strong logic coverage, but the runtime wiring remains deliberately 
 - `.github/superpower/brainstorm/...` and `.github/superpower/plan/...` are archival inputs that explain why the repo looks the way it does, not what still needs to be built next.
 
 This means the architecture is ready for continued feature wiring, but the repo should be described as a well-tested gameplay foundation rather than a fully integrated shipped game.
+
+One important deployment constraint remains: upload retention is enforced as a maximum lifetime inside the current in-memory server process. Restarting the server clears uploads before those maximum lifetimes elapse.

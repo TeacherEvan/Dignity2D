@@ -2,6 +2,7 @@ import sharp from "sharp";
 import { afterEach, describe, expect, it } from "vitest";
 import WebSocket from "ws";
 import { createAppServer } from "./index";
+import { MAX_UPLOAD_BYTES } from "./upload/processImage";
 
 const activeServers: Array<ReturnType<typeof createAppServer>> = [];
 
@@ -59,19 +60,63 @@ describe("server entrypoint", () => {
     expect(uploadResponse.ok).toBe(true);
     const uploaded = (await uploadResponse.json()) as {
       imageId: string;
-      imageUrl: string;
+      imagePath: string;
       retention: string;
       bytes: number;
     };
-    expect(uploaded.imageId).toMatch(/^image-/);
-    expect(uploaded.imageUrl).toContain(`/images/${uploaded.imageId}`);
+    expect(uploaded.imageId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+    );
+    expect(uploaded.imagePath).toContain(`/images/${uploaded.imageId}`);
+    expect(new URL(uploaded.imagePath, app.getUrl()).searchParams.get("token")).toBeTruthy();
     expect(uploaded.retention).toBe("session");
     expect(uploaded.bytes).toBeGreaterThan(0);
+    expect(Object.hasOwn(uploaded, "imageUrl")).toBe(false);
 
-    const imageResponse = await fetch(uploaded.imageUrl);
+    const imageUrl = new URL(uploaded.imagePath, app.getUrl()).toString();
+    const imageResponse = await fetch(imageUrl);
     expect(imageResponse.ok).toBe(true);
     expect(imageResponse.headers.get("content-type")).toBe("image/webp");
     expect((await imageResponse.arrayBuffer()).byteLength).toBeGreaterThan(0);
+
+    const deniedUrl = new URL(imageUrl);
+    deniedUrl.searchParams.set("token", "wrong-token");
+    const deniedResponse = await fetch(deniedUrl);
+    expect(deniedResponse.status).toBe(404);
+  });
+
+  it("rejects oversized upload bodies before processing", async () => {
+    const app = createAppServer();
+    activeServers.push(app);
+    await app.listen();
+
+    const oversizedResponse = await fetch(`${app.getUrl()}/upload`, {
+      method: "POST",
+      headers: { "content-type": "application/octet-stream" },
+      body: new Uint8Array(MAX_UPLOAD_BYTES + 1),
+    });
+
+    expect(oversizedResponse.status).toBe(413);
+    await expect(oversizedResponse.json()).resolves.toEqual({
+      error: "Upload exceeds server size limit.",
+    });
+  });
+
+  it("rejects oversized JSON room requests with a generic size-limit error", async () => {
+    const app = createAppServer();
+    activeServers.push(app);
+    await app.listen();
+
+    const oversizedResponse = await fetch(`${app.getUrl()}/rooms`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ imageId: "x".repeat(9000) }),
+    });
+
+    expect(oversizedResponse.status).toBe(413);
+    await expect(oversizedResponse.json()).resolves.toEqual({
+      error: "Request body exceeds size limit.",
+    });
   });
 
   it("responds over websocket for invalid and valid room messages", async () => {
@@ -136,5 +181,32 @@ describe("server entrypoint", () => {
     );
 
     expect(received).toEqual({ type: "error", message: "Room not found." });
+  });
+
+  it("rejects websocket payloads that only match the type discriminator", async () => {
+    const app = createAppServer();
+    activeServers.push(app);
+    await app.listen();
+
+    const received = await new Promise<{ type: string; message?: string }>(
+      (resolve, reject) => {
+        const socket = new WebSocket(app.getUrl().replace("http", "ws"));
+        socket.once("open", () => {
+          socket.send(JSON.stringify({ type: "create-room" }));
+        });
+        socket.once("message", (message) => {
+          socket.close();
+          resolve(
+            JSON.parse(message.toString()) as {
+              type: string;
+              message?: string;
+            },
+          );
+        });
+        socket.once("error", reject);
+      },
+    );
+
+    expect(received).toEqual({ type: "error", message: "Unsupported message." });
   });
 });

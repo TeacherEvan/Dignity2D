@@ -37,7 +37,7 @@ export function createWelcomeScreenHtml(): string {
           <button id="accessibility-button" type="button">Accessibility</button>
         </div>
 
-        <p id="home-status" style="margin: 18px 0 0; min-height: 24px; color: #c8a96e; text-align: center;">Ready</p>
+        <p id="home-status" role="status" aria-live="polite" aria-atomic="true" style="margin: 18px 0 0; min-height: 24px; color: #c8a96e; text-align: center;">Ready</p>
       </section>
     </main>
     <button id="return-to-launcher-button" type="button" style="display: none; position: fixed; top: 16px; right: 16px; z-index: 10; padding: 10px 14px; border-radius: 12px; border: 1px solid rgba(255,215,0,0.35); background: rgba(10,8,18,0.88); color: #ffd700; cursor: pointer;">Return to launcher</button>
