@@ -20,6 +20,12 @@ This document is the current implementation truth. The brainstorm and plan files
 
 ## Module Boundaries
 
+### Display, Layout, And Diagnostics
+
+`src/display` owns viewport-to-device classification, standard control and HUD layouts, and versioned layout preference persistence. `src/welcome` owns testable launcher markup. `src/diagnostics` owns privacy-safe event tracking for local diagnostics and future observability sinks.
+
+Territorial progression lives in `src/progression/territoryProgression.ts`, while enemy intent and pressure rules live in `src/enemies/EnemyBehavior.ts`.
+
 ### 1. Core Gameplay State
 
 `src/game/types.ts` defines the canonical gameplay state:

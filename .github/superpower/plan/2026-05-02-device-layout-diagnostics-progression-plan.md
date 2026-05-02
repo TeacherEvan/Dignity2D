@@ -10,7 +10,7 @@
 
 **Estimated Complexity:** 15 tasks: 2 XS, 7 S, 6 M = medium-high scope focused on tests and integration polish.
 
-**Critical Path:** T0 -> T1 -> T2 -> T3 -> T4 -> T5 -> T7 -> T9 -> T11 -> T13 -> T14.
+**Critical Path:** T0 -> T1 -> T3 -> T2 -> T4 -> T5 -> T7 -> T9 -> T11 -> T13 -> T14.
 
 **Risk Assessment:**
 
@@ -36,9 +36,9 @@
 ```mermaid
 graph TD
   T0[T0 Baseline verification] --> T1[T1 Display profile]
-  T1 --> T2[T2 Standard device layouts]
-  T2 --> T3[T3 Persistent layout preferences]
-  T3 --> T4[T4 Welcome screen renderer]
+  T1 --> T3[T3 Persistent layout preferences]
+  T3 --> T2[T2 Standard device layouts]
+  T2 --> T4[T4 Welcome screen renderer]
   T4 --> T5[T5 Launcher layout integration]
   T5 --> T6[T6 Solo and multiplayer session tests]
   T3 --> T7[T7 Diagnostics event tracker]
@@ -55,13 +55,13 @@ graph TD
 
 ## Parallel Work
 
-- After T3: T4 welcome extraction and T7 diagnostics tracker can run independently.
+- After T3: T2 standard layouts and T7 diagnostics tracker can run independently.
 - After T6: T9 territorial progression and T12 server-side room tests can be prepared independently, though T12 final assertions should wait for T8 naming conventions.
 - After T10: T11 helper integration and T13 E2E test drafting can proceed in parallel if selectors are stable.
 
 ## Rollback Points
 
-- **Rollback A after T3:** Device detection and layout persistence complete. Rollback command: `git revert --no-commit HEAD~3..HEAD && git commit -m "revert: device layout foundation"`
+- **Rollback A after T2:** Device detection, layout persistence, and standard layouts complete. Rollback command: `git revert --no-commit HEAD~3..HEAD && git commit -m "revert: device layout foundation"`
 - **Rollback B after T6:** Welcome and session-mode coverage complete. Rollback command: `git revert --no-commit HEAD~3..HEAD && git commit -m "revert: welcome and session coverage"`
 - **Rollback C after T8:** Diagnostics layer complete and privacy-tested. Rollback command: `git revert --no-commit HEAD~2..HEAD && git commit -m "revert: diagnostics tracking"`
 - **Rollback D after T11:** Gameplay progression, enemy behavior, and scene helpers complete. Rollback command: `git revert --no-commit HEAD~3..HEAD && git commit -m "revert: progression enemy scene integration"`
@@ -239,7 +239,138 @@ Tests  5 passed
 
 ---
 
-## T2: Standard Device Layouts [Size: S] [Depends: T1]
+## T3: Persistent Layout Preferences [Size: M] [Depends: T1]
+
+**Step 1: Write failing tests**
+
+- File: `src/display/LayoutPreferences.test.ts`
+- Code:
+
+```typescript
+import { beforeEach, describe, expect, it } from "vitest";
+import { loadLayoutPreference, saveLayoutPreference } from "./LayoutPreferences";
+
+describe("LayoutPreferences", () => {
+  beforeEach(() => localStorage.clear());
+
+  it("returns null when no layout is stored", () => {
+    expect(loadLayoutPreference("phone")).toBeNull();
+  });
+
+  it("persists a layout by device class", () => {
+    saveLayoutPreference("phone", {
+      layoutId: "portrait-phone-standard",
+      joystickScale: 1.2,
+      handedness: "left",
+    });
+    expect(loadLayoutPreference("phone")).toEqual({
+      layoutId: "portrait-phone-standard",
+      joystickScale: 1.2,
+      handedness: "left",
+    });
+  });
+
+  it("keeps tablet and phone preferences separate", () => {
+    saveLayoutPreference("phone", {
+      layoutId: "portrait-phone-standard",
+      joystickScale: 1,
+      handedness: "left",
+    });
+    expect(loadLayoutPreference("tablet")).toBeNull();
+  });
+
+  it("ignores malformed stored values", () => {
+    localStorage.setItem("dignity.layout.phone.v1", "{bad");
+    expect(loadLayoutPreference("phone")).toBeNull();
+  });
+
+  it("rejects invalid handedness", () => {
+    localStorage.setItem(
+      "dignity.layout.phone.v1",
+      JSON.stringify({ layoutId: "portrait-phone-standard", joystickScale: 1, handedness: "middle" }),
+    );
+    expect(loadLayoutPreference("phone")).toBeNull();
+  });
+});
+```
+
+**Step 2: Run test and verify failure**
+
+- Command: `npm test -- src/display/LayoutPreferences.test.ts`
+- Expected output:
+
+```text
+FAIL src/display/LayoutPreferences.test.ts
+Error: Cannot find module './LayoutPreferences'
+```
+
+**Step 3: Implement persistent layout preferences**
+
+- File: `src/display/LayoutPreferences.ts`
+- Code:
+
+```typescript
+import type { DeviceClass } from "./DisplayProfile";
+
+export type Handedness = "left" | "right";
+
+export type LayoutPreference = {
+  layoutId: string;
+  joystickScale: number;
+  handedness: Handedness;
+};
+
+function keyFor(deviceClass: DeviceClass): string {
+  return `dignity.layout.${deviceClass}.v1`;
+}
+
+function isHandedness(value: unknown): value is Handedness {
+  return value === "left" || value === "right";
+}
+
+export function loadLayoutPreference(deviceClass: DeviceClass): LayoutPreference | null {
+  try {
+    const raw = localStorage.getItem(keyFor(deviceClass));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<LayoutPreference>;
+    if (
+      typeof parsed.layoutId !== "string" ||
+      typeof parsed.joystickScale !== "number" ||
+      !isHandedness(parsed.handedness)
+    ) {
+      return null;
+    }
+    return {
+      layoutId: parsed.layoutId,
+      joystickScale: parsed.joystickScale,
+      handedness: parsed.handedness,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function saveLayoutPreference(
+  deviceClass: DeviceClass,
+  preference: LayoutPreference,
+): void {
+  localStorage.setItem(keyFor(deviceClass), JSON.stringify(preference));
+}
+```
+
+**Step 4: Run display tests and verify success**
+
+- Command: `npm test -- src/display/LayoutPreferences.test.ts`
+- Expected output:
+
+```text
+PASS src/display/LayoutPreferences.test.ts
+Tests  5 passed
+```
+
+---
+
+## T2: Standard Device Layouts [Size: S] [Depends: T3]
 
 **Step 1: Write failing tests**
 
@@ -386,138 +517,6 @@ export function resolveLayoutWithPreference(
 ```text
 PASS src/display/DeviceLayout.test.ts
 Tests  4 passed
-```
-
----
-
-## T3: Persistent Layout Preferences [Size: M] [Depends: T2]
-
-**Step 1: Write failing tests**
-
-- File: `src/display/LayoutPreferences.test.ts`
-- Code:
-
-```typescript
-import { beforeEach, describe, expect, it } from "vitest";
-import { loadLayoutPreference, saveLayoutPreference } from "./LayoutPreferences";
-
-describe("LayoutPreferences", () => {
-  beforeEach(() => localStorage.clear());
-
-  it("returns null when no layout is stored", () => {
-    expect(loadLayoutPreference("phone")).toBeNull();
-  });
-
-  it("persists a layout by device class", () => {
-    saveLayoutPreference("phone", {
-      layoutId: "portrait-phone-standard",
-      joystickScale: 1.2,
-      handedness: "left",
-    });
-    expect(loadLayoutPreference("phone")).toEqual({
-      layoutId: "portrait-phone-standard",
-      joystickScale: 1.2,
-      handedness: "left",
-    });
-  });
-
-  it("keeps tablet and phone preferences separate", () => {
-    saveLayoutPreference("phone", {
-      layoutId: "portrait-phone-standard",
-      joystickScale: 1,
-      handedness: "left",
-    });
-    expect(loadLayoutPreference("tablet")).toBeNull();
-  });
-
-  it("ignores malformed stored values", () => {
-    localStorage.setItem("dignity.layout.phone.v1", "{bad");
-    expect(loadLayoutPreference("phone")).toBeNull();
-  });
-
-  it("rejects invalid handedness", () => {
-    localStorage.setItem(
-      "dignity.layout.phone.v1",
-      JSON.stringify({ layoutId: "portrait-phone-standard", joystickScale: 1, handedness: "middle" }),
-    );
-    expect(loadLayoutPreference("phone")).toBeNull();
-  });
-});
-```
-
-**Step 2: Run test and verify failure**
-
-- Command: `npm test -- src/display/LayoutPreferences.test.ts`
-- Expected output:
-
-```text
-FAIL src/display/LayoutPreferences.test.ts
-Error: Cannot find module './LayoutPreferences'
-```
-
-**Step 3: Implement persistent layout preferences**
-
-- File: `src/display/LayoutPreferences.ts`
-- Code:
-
-```typescript
-import type { DeviceClass } from "./DisplayProfile";
-
-export type Handedness = "left" | "right";
-
-export type LayoutPreference = {
-  layoutId: string;
-  joystickScale: number;
-  handedness: Handedness;
-};
-
-function keyFor(deviceClass: DeviceClass): string {
-  return `dignity.layout.${deviceClass}.v1`;
-}
-
-function isHandedness(value: unknown): value is Handedness {
-  return value === "left" || value === "right";
-}
-
-export function loadLayoutPreference(deviceClass: DeviceClass): LayoutPreference | null {
-  try {
-    const raw = localStorage.getItem(keyFor(deviceClass));
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as Partial<LayoutPreference>;
-    if (
-      typeof parsed.layoutId !== "string" ||
-      typeof parsed.joystickScale !== "number" ||
-      !isHandedness(parsed.handedness)
-    ) {
-      return null;
-    }
-    return {
-      layoutId: parsed.layoutId,
-      joystickScale: parsed.joystickScale,
-      handedness: parsed.handedness,
-    };
-  } catch {
-    return null;
-  }
-}
-
-export function saveLayoutPreference(
-  deviceClass: DeviceClass,
-  preference: LayoutPreference,
-): void {
-  localStorage.setItem(keyFor(deviceClass), JSON.stringify(preference));
-}
-```
-
-**Step 4: Run display tests and verify success**
-
-- Command: `npm test -- src/display`
-- Expected output:
-
-```text
-PASS src/display/DisplayProfile.test.ts
-PASS src/display/DeviceLayout.test.ts
-PASS src/display/LayoutPreferences.test.ts
 ```
 
 **Rollback Point A Verification**

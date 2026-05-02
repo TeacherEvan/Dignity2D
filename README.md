@@ -90,6 +90,10 @@ npm run format        # Check formatting with Prettier
 - `src/bootstrap.ts` lazy-loads Phaser and starts the runtime only after launcher intent.
 - Phaser is intentionally split into deferred subsystem chunks so first paint stays light and the full runtime only loads when a session starts.
 - `src/scenes/GameScene.ts` runs the current solo gameplay loop once Phaser is active.
+- Display detection and standard device layouts live under `src/display`, with versioned local layout preferences per device class.
+- Welcome-screen rendering is tested separately from launcher event wiring under `src/welcome`.
+- Privacy-safe diagnostic event tracking lives under `src/diagnostics` and filters room IDs, image URLs, file names, and free text from payloads.
+- Territorial progression milestones live under `src/progression/territoryProgression.ts`.
 
 Core rules stay outside Phaser wherever possible:
 
@@ -142,6 +146,7 @@ The project leans heavily on deterministic unit tests.
 
 - Gameplay, networking contracts, theme logic, upload policy, and performance fallbacks are covered with Vitest.
 - Browser startup and the home screen path are covered with Playwright.
+- Display detection, device layouts, session-mode resolution, territorial progression, and enemy intent rules are covered with focused Vitest slices.
 
 Useful commands:
 

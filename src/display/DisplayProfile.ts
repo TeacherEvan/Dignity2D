@@ -41,7 +41,9 @@ export function detectDisplayProfile(input: DisplayInput): DisplayProfile {
   };
 }
 
-export function readDisplayProfileFromWindow(source: WindowLike = window): DisplayProfile {
+export function readDisplayProfileFromWindow(
+  source: WindowLike = window,
+): DisplayProfile {
   return detectDisplayProfile({
     width: source.visualViewport?.width ?? source.innerWidth,
     height: source.visualViewport?.height ?? source.innerHeight,

@@ -10,6 +10,8 @@ import {
   advanceGameState,
   BOARD_SIZE,
   createSceneGameState,
+  makeGameStatusText,
+  makeSceneLaunchData,
 } from "./GameScene";
 
 describe("GameScene helpers", () => {
@@ -83,5 +85,52 @@ describe("GameScene helpers", () => {
 
     expect(next.players[0]?.activeTrail).toBeNull();
     expect(next.players[0]?.position).toEqual({ x: 0, y: 0 });
+  });
+
+  it("reports solo and multiplayer status labels without leaking image URLs", () => {
+    expect(
+      makeGameStatusText(
+        {
+          roomId: undefined,
+          imageId: "default-image",
+          imageUrl: "https://private.test/img",
+        },
+        false,
+        0,
+        "Border Camp",
+      ),
+    ).toBe("Image default-image");
+    expect(
+      makeGameStatusText(
+        {
+          roomId: "room-1",
+          imageId: "img-1",
+          imageUrl: "https://private.test/img",
+        },
+        false,
+        0,
+        "Border Camp",
+      ),
+    ).toBe("Room room-1");
+  });
+
+  it("shows secured status when the game is won", () => {
+    expect(makeGameStatusText({}, true, 2, "Image Secured")).toBe(
+      "Image secured",
+    );
+  });
+
+  it("falls back to territory stage before enemy count", () => {
+    expect(makeGameStatusText({}, false, 3, "Safe Quarter")).toBe(
+      "Safe Quarter",
+    );
+  });
+
+  it("applies persisted layout id to scene launch data", () => {
+    const launchData = makeSceneLaunchData({
+      imageId: "img-1",
+      layoutId: "portrait-phone-standard",
+    });
+    expect(launchData.layoutId).toBe("portrait-phone-standard");
   });
 });

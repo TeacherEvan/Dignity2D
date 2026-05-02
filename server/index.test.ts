@@ -104,4 +104,37 @@ describe("server entrypoint", () => {
     expect(received[0]?.type).toBe("error");
     expect(received[1]?.type).toBe("room-created");
   });
+
+  it("returns websocket errors for missing reconnect rooms", async () => {
+    const app = createAppServer();
+    activeServers.push(app);
+    await app.listen();
+
+    const received = await new Promise<{ type: string; message?: string }>(
+      (resolve, reject) => {
+        const socket = new WebSocket(app.getUrl().replace("http", "ws"));
+        socket.once("open", () => {
+          socket.send(
+            JSON.stringify({
+              type: "reconnect",
+              roomId: "missing",
+              playerId: "p1",
+            }),
+          );
+        });
+        socket.once("message", (message) => {
+          socket.close();
+          resolve(
+            JSON.parse(message.toString()) as {
+              type: string;
+              message?: string;
+            },
+          );
+        });
+        socket.once("error", reject);
+      },
+    );
+
+    expect(received).toEqual({ type: "error", message: "Room not found." });
+  });
 });

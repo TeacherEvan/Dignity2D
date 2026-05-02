@@ -1,6 +1,8 @@
 export const BACKEND_REQUIRED_MESSAGE =
   "Online rooms and uploads require VITE_SERVER_URL in hosted deployments.";
 
+const PLACEHOLDER_SERVER_URL = "https://your-backend.example.com";
+
 type LocationLike = {
   origin: string;
   hostname: string;
@@ -20,12 +22,17 @@ export function resolveDefaultServerUrl(
     ? null
     : window.location,
 ): string | null {
-  if (configuredServerUrl) {
+  const localFallback =
+    locationLike && isLocalHostname(locationLike.hostname)
+      ? "http://127.0.0.1:8787"
+      : null;
+
+  if (configuredServerUrl && configuredServerUrl !== PLACEHOLDER_SERVER_URL) {
     return configuredServerUrl;
   }
 
-  if (locationLike && isLocalHostname(locationLike.hostname)) {
-    return "http://127.0.0.1:8787";
+  if (localFallback) {
+    return localFallback;
   }
 
   return null;

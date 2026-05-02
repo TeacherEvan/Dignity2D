@@ -5,6 +5,7 @@ export type GameLaunchData = {
   imageId?: string;
   imageUrl?: string;
   stateVersion?: number;
+  layoutId?: string;
 };
 
 let pendingLaunchData: GameLaunchData = {};
@@ -15,4 +16,10 @@ export function setPendingLaunchData(data: GameLaunchData): void {
 
 export function getPendingLaunchData(): GameLaunchData {
   return pendingLaunchData;
+}
+
+export type GameSessionMode = "solo" | "multiplayer";
+
+export function resolveSessionMode(data: GameLaunchData): GameSessionMode {
+  return data.roomId && data.playerId ? "multiplayer" : "solo";
 }

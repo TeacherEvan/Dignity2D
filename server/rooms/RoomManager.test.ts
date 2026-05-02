@@ -22,4 +22,18 @@ describe("RoomManager", () => {
     manager.joinRoom(room.id);
     expect(manager.joinRoom(room.id)).toBeNull();
   });
+
+  it("rejects a third player", () => {
+    const manager = new RoomManager();
+    const room = manager.createRoom("img-1");
+    expect(manager.joinRoom(room.id)?.players).toHaveLength(2);
+    expect(manager.joinRoom(room.id)).toBeNull();
+  });
+
+  it("increments state version when a second player joins", () => {
+    const manager = new RoomManager();
+    const room = manager.createRoom("img-1");
+    expect(room.stateVersion).toBe(0);
+    expect(manager.joinRoom(room.id)?.stateVersion).toBe(1);
+  });
 });

@@ -18,6 +18,7 @@ import {
   calculateRevealPercentText,
   makeMaskResolution,
 } from "../render/RevealMask";
+import { getTerritoryStage } from "../progression/territoryProgression";
 import type { GameLaunchData } from "../session";
 import { PALETTE } from "../theme/palette";
 import { getPendingLaunchData } from "../session";
@@ -173,6 +174,28 @@ export function advanceGameState(
   return nextState;
 }
 
+export function makeSceneLaunchData(data: GameLaunchData): GameLaunchData {
+  return { ...data };
+}
+
+export function makeGameStatusText(
+  launchData: GameLaunchData,
+  won: boolean,
+  enemyCount: number,
+  territoryLabel?: string,
+): string {
+  if (won) {
+    return "Image secured";
+  }
+  if (launchData.roomId) {
+    return `Room ${launchData.roomId}`;
+  }
+  if (launchData.imageId) {
+    return `Image ${launchData.imageId}`;
+  }
+  return territoryLabel ?? `Enemies ${enemyCount}`;
+}
+
 export class GameScene extends Phaser.Scene {
   private state!: GameState;
   private readonly joystick = new VirtualJoystick();
@@ -195,7 +218,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   init(data: GameLaunchData): void {
-    this.launchData = { ...getPendingLaunchData(), ...data };
+    this.launchData = makeSceneLaunchData({
+      ...getPendingLaunchData(),
+      ...data,
+    });
   }
 
   preload(): void {
@@ -384,16 +410,14 @@ export class GameScene extends Phaser.Scene {
       calculateRevealPercentText(this.state.revealedRatio),
     );
     this.scoreText?.setText(`Score ${player.score}`);
-    const roomLabel = this.launchData.roomId
-      ? `Room ${this.launchData.roomId}`
-      : null;
-    const imageLabel = this.launchData.imageId
-      ? `Image ${this.launchData.imageId}`
-      : null;
+    const territoryStage = getTerritoryStage(this.state.revealedRatio);
     this.statusText?.setText(
-      this.state.won
-        ? "Image secured"
-        : (roomLabel ?? imageLabel ?? `Enemies ${this.state.enemies.length}`),
+      makeGameStatusText(
+        this.launchData,
+        this.state.won,
+        this.state.enemies.length,
+        territoryStage.label,
+      ),
     );
   }
 }

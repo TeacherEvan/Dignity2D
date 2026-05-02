@@ -7,6 +7,28 @@ test("home menu opens and shows quick play", async ({ page }) => {
   await expect(page.locator("#room-id-input")).toBeVisible();
 });
 
+test("mobile welcome keeps primary controls visible", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  await expect(page.locator("#launcher-shell")).toBeVisible();
+  await expect(page.locator("#quick-play-button")).toBeVisible();
+  await expect(page.locator("#create-room-button")).toBeVisible();
+  await expect(page.locator("#settings-button")).toBeVisible();
+  await expect(page.locator("#accessibility-button")).toBeVisible();
+});
+
+test("quick play starts a solo canvas with persisted layout metadata", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await expect(page.locator("#launcher-shell")).toHaveAttribute(
+    "data-layout-id",
+    /standard/,
+  );
+  await page.locator("#quick-play-button").click();
+  await expect(page.locator("canvas")).toBeVisible();
+});
+
 test("home scene can upload an image and create a room", async ({ page }) => {
   await page.goto("/");
 

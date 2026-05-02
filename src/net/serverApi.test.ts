@@ -64,6 +64,15 @@ describe("serverApi", () => {
     ).toBe("http://127.0.0.1:8787");
   });
 
+  it("ignores the placeholder backend URL during local development", () => {
+    expect(
+      resolveDefaultServerUrl("https://your-backend.example.com", {
+        origin: "http://127.0.0.1:5173",
+        hostname: "127.0.0.1",
+      }),
+    ).toBe("http://127.0.0.1:8787");
+  });
+
   it("returns null for hosted builds without an explicit backend", () => {
     expect(
       resolveDefaultServerUrl(undefined, {
