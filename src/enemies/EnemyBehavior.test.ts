@@ -11,6 +11,15 @@ describe("EnemyBehavior", () => {
     ).toBe("hunt-trail");
   });
 
+  it("keeps chasers on patrol when no trail is active", () => {
+    expect(
+      chooseEnemyIntent("chaser", {
+        activeTrailCount: 0,
+        bothPlayersDrawing: false,
+      }),
+    ).toBe("patrol");
+  });
+
   it("shooters keep predictable lanes", () => {
     expect(
       chooseEnemyIntent("shooter", {
@@ -36,6 +45,15 @@ describe("EnemyBehavior", () => {
         bothPlayersDrawing: true,
       }),
     ).toBe("disrupt-coop");
+  });
+
+  it("keeps disruptors on patrol when only one player is drawing", () => {
+    expect(
+      chooseEnemyIntent("disruptor", {
+        activeTrailCount: 1,
+        bothPlayersDrawing: false,
+      }),
+    ).toBe("patrol");
   });
 
   it("scales pressure when both co-op players draw", () => {

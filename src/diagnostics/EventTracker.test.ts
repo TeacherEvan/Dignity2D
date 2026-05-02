@@ -46,4 +46,25 @@ describe("EventTracker", () => {
     expect(sink).toHaveBeenCalledTimes(1);
     expect(tracker.snapshot()).toEqual([]);
   });
+
+  it("does not call the sink when flushed empty", () => {
+    const sink = vi.fn();
+    const tracker = createEventTracker({ sink });
+
+    tracker.flush();
+
+    expect(sink).not.toHaveBeenCalled();
+  });
+
+  it("returns a snapshot copy instead of the live queue", () => {
+    const tracker = createEventTracker({ now: () => 2 });
+    tracker.track("layout_saved", { layoutId: "desktop-standard" });
+
+    const snapshot = tracker.snapshot();
+    snapshot.push({ name: "welcome_viewed", at: 99, payload: {} });
+
+    expect(tracker.snapshot()).toEqual([
+      { name: "layout_saved", at: 2, payload: { layoutId: "desktop-standard" } },
+    ]);
+  });
 });

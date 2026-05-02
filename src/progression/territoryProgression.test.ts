@@ -25,9 +25,24 @@ describe("territoryProgression", () => {
     expect(getTerritoryStage(2).id).toBe("image-secured");
   });
 
+  it("clamps negative reveal to the first milestone", () => {
+    expect(getTerritoryStage(-0.2).id).toBe("border-camp");
+  });
+
   it("lists milestones in ascending order", () => {
     expect(listTerritoryMilestones().map((item) => item.threshold)).toEqual([
       0, 0.25, 0.5, 0.75,
     ]);
+  });
+
+  it("returns a defensive copy of the milestone list", () => {
+    const first = listTerritoryMilestones();
+    first[0] = { id: "image-secured", label: "Changed", threshold: 1 };
+
+    expect(listTerritoryMilestones()[0]).toEqual({
+      id: "border-camp",
+      label: "Border Camp",
+      threshold: 0,
+    });
   });
 });

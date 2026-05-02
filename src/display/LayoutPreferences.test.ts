@@ -49,4 +49,38 @@ describe("LayoutPreferences", () => {
     );
     expect(loadLayoutPreference("phone")).toBeNull();
   });
+
+  it("replaces the saved layout for the same device class", () => {
+    saveLayoutPreference("phone", {
+      layoutId: "portrait-phone-standard",
+      joystickScale: 1,
+      handedness: "left",
+    });
+    saveLayoutPreference("phone", {
+      layoutId: "landscape-phone-standard",
+      joystickScale: 1.25,
+      handedness: "right",
+    });
+
+    expect(loadLayoutPreference("phone")).toEqual({
+      layoutId: "landscape-phone-standard",
+      joystickScale: 1.25,
+      handedness: "right",
+    });
+  });
+
+  it("keeps desktop preferences isolated from other device classes", () => {
+    saveLayoutPreference("desktop", {
+      layoutId: "desktop-standard",
+      joystickScale: 0.95,
+      handedness: "right",
+    });
+
+    expect(loadLayoutPreference("phone")).toBeNull();
+    expect(loadLayoutPreference("desktop")).toEqual({
+      layoutId: "desktop-standard",
+      joystickScale: 0.95,
+      handedness: "right",
+    });
+  });
 });

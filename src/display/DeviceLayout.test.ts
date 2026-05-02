@@ -47,4 +47,34 @@ describe("DeviceLayout", () => {
     expect(layout.joystick.anchor).toBe("bottom-right");
     expect(layout.ability.anchor).toBe("bottom-left");
   });
+
+  it("ignores saved preferences from a different standard layout", () => {
+    const layout = resolveLayoutWithPreference(
+      { deviceClass: "phone", orientation: "portrait", compactHud: true },
+      {
+        layoutId: "landscape-phone-standard",
+        joystickScale: 1.4,
+        handedness: "right",
+      },
+    );
+
+    expect(layout.id).toBe("portrait-phone-standard");
+    expect(layout.joystick.anchor).toBe("bottom-left");
+    expect(layout.ability.anchor).toBe("bottom-right");
+    expect(layout.joystick.size).toBe(96);
+  });
+
+  it("clamps persisted joystick scale to the supported minimum", () => {
+    const layout = resolveLayoutWithPreference(
+      { deviceClass: "phone", orientation: "portrait", compactHud: true },
+      {
+        layoutId: "portrait-phone-standard",
+        joystickScale: 0.2,
+        handedness: "left",
+      },
+    );
+
+    expect(layout.joystick.size).toBe(77);
+    expect(layout.joystick.anchor).toBe("bottom-left");
+  });
 });

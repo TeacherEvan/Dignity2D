@@ -58,4 +58,51 @@ describe("detectDisplayProfile", () => {
     expect(profile.height).toBe(844);
     expect(profile.deviceClass).toBe("phone");
   });
+
+  it("treats the 600px shortest side threshold as tablet", () => {
+    const profile = detectDisplayProfile({
+      width: 600,
+      height: 960,
+      devicePixelRatio: 2,
+    });
+
+    expect(profile.deviceClass).toBe("tablet");
+    expect(profile.orientation).toBe("portrait");
+  });
+
+  it("treats the 1200px longest side threshold as desktop", () => {
+    const profile = detectDisplayProfile({
+      width: 1200,
+      height: 800,
+      devicePixelRatio: 1,
+    });
+
+    expect(profile.deviceClass).toBe("desktop");
+    expect(profile.orientation).toBe("landscape");
+  });
+
+  it("rounds viewport size and clamps device pixel ratio to at least one", () => {
+    const profile = detectDisplayProfile({
+      width: 389.6,
+      height: 844.2,
+      devicePixelRatio: 0,
+    });
+
+    expect(profile.width).toBe(390);
+    expect(profile.height).toBe(844);
+    expect(profile.devicePixelRatio).toBe(1);
+  });
+
+  it("falls back to inner window size when visualViewport is unavailable", () => {
+    const profile = readDisplayProfileFromWindow({
+      innerWidth: 1024,
+      innerHeight: 768,
+      devicePixelRatio: 1.5,
+      visualViewport: null,
+    });
+
+    expect(profile.width).toBe(1024);
+    expect(profile.height).toBe(768);
+    expect(profile.deviceClass).toBe("tablet");
+  });
 });
