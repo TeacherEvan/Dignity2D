@@ -6,8 +6,8 @@ export function createWelcomeScreenHtml(): string {
         <div data-launcher-content="body">
           <header data-launcher-copy="intro">
             <p data-launcher-kicker="brand">Dignity Arcade</p>
-            <h1 id="welcome-title">Reveal, restore, and reconnect.</h1>
-            <p data-launcher-copy-role="summary">Choose solo, create a room, join a friend, or upload a private image.</p>
+            <h1 id="welcome-title">Trace the line. Hold the ground.</h1>
+            <p data-launcher-copy-role="summary">Play solo, open a room, join a friend, or bring a private image into the run.</p>
           </header>
 
           <div data-launcher-actions="primary">

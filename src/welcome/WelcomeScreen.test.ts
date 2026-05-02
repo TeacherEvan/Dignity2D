@@ -30,8 +30,13 @@ describe("createWelcomeScreenHtml", () => {
 
   it("keeps calm welcome copy visible", () => {
     document.body.innerHTML = createWelcomeScreenHtml();
-    expect(document.querySelector("#welcome-title")?.textContent).toContain(
-      "Reveal",
+    expect(document.querySelector("#welcome-title")?.textContent).toBe(
+      "Trace the line. Hold the ground.",
+    );
+    expect(
+      document.querySelector('[data-launcher-copy-role="summary"]')?.textContent,
+    ).toBe(
+      "Play solo, open a room, join a friend, or bring a private image into the run.",
     );
     expect(document.querySelector("#home-status")?.textContent).toBe("Ready");
   });
