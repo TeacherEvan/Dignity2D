@@ -1,8 +1,10 @@
 # Plan: Signal Ember Launcher Animation
 
 **Date:** 2026-05-02
-**Status:** Ready for execution
+**Status:** Implemented for the current launcher phase; retain as execution history
 **Source Design:** `.github/superpower/brainstorm/2026-05-02-signal-ember-launcher-design.md`
+
+Implementation note: the launcher-local DOM/CSS treatment, reduced-motion branch, control visibility coverage, and interaction-linked cue behavior now exist in the current repo. Treat this file as execution history for the implemented launcher shell. The addendum items at the end remain optional follow-up polish, not required current work.
 
 ## Strategy
 

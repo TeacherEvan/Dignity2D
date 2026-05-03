@@ -1,6 +1,16 @@
 # Dignity2D Device Layout, Diagnostics, Welcome, Modes, Progression, And Enemy Test Plan
 
+**Status:** Partially implemented; foundation landed, live diagnostics and deeper runtime integration still pending
+
+Implementation note: display profiling, persistent layout preferences, welcome and launcher layout coverage, territorial progression, and enemy behavior are present in the current repo. The diagnostics module exists and is tested in isolation, but live launcher/runtime wiring is still pending. Treat this file as execution history for the landed foundation work, not as a fully current task list.
+
 **Goal:** Add best-practice test coverage and implementation for display size detection, persistent standard layouts per device, welcome screen behavior, solo and multiplayer flows, privacy-safe diagnostic event tracking, territorial progression, and richer enemy behavior.
+
+## Verified Status Snapshot
+
+- Completed for the current phase: display detection, standard layouts, persisted layout preferences, welcome renderer coverage, launcher layout integration, session-mode coverage, territorial progression, enemy behavior helpers, and browser coverage for launcher and room flows.
+- Still pending from the original plan: live diagnostics integration into `src/launcher.ts` and `src/scenes/GameScene.ts`, plus any server-side diagnostics follow-through built on those events.
+- The current implementation truth remains `README.md` and `architecture.md`.
 
 **Architecture:** Keep Dignity2D logic-first. New behavior lives in pure TypeScript modules under `src/display`, `src/welcome`, `src/diagnostics`, `src/progression`, and `src/enemies`, with thin integration into `src/launcher.ts`, `src/session.ts`, and `src/scenes/GameScene.ts`. Phaser-heavy behavior remains shallow in unit tests and is covered through helpers or Playwright.
 

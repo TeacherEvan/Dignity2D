@@ -15,8 +15,10 @@ const fetchMock = vi.fn();
 
 class MockWebSocket {
   static instances: MockWebSocket[] = [];
+  static OPEN = 1;
 
   private listeners = new Map<string, Array<(event?: unknown) => void>>();
+  readyState = 0;
 
   constructor(public readonly url: string) {
     MockWebSocket.instances.push(this);
@@ -26,11 +28,21 @@ class MockWebSocket {
     this.listeners.set(type, [...(this.listeners.get(type) ?? []), listener]);
   }
 
+  removeEventListener(type: string, listener: (event?: unknown) => void): void {
+    this.listeners.set(
+      type,
+      (this.listeners.get(type) ?? []).filter((entry) => entry !== listener),
+    );
+  }
+
   send(_data: string): void {}
 
   close(): void {}
 
   emit(type: string, event?: unknown): void {
+    if (type === "open") {
+      this.readyState = MockWebSocket.OPEN;
+    }
     for (const listener of this.listeners.get(type) ?? []) {
       listener(event);
     }
@@ -115,7 +127,7 @@ describe("serverApi", () => {
     const socket = MockWebSocket.instances[0]!;
     socket.emit("open");
     socket.emit("message", {
-      data: JSON.stringify({ type: "state-sync", stateVersion: 3 }),
+      data: JSON.stringify({ type: "state-sync", roomId: "room-1", stateVersion: 3 }),
     });
 
     await expect(pending).resolves.toBe(3);
@@ -141,7 +153,7 @@ describe("serverApi", () => {
     const socket = MockWebSocket.instances[0]!;
     socket.emit("open");
     socket.emit("message", {
-      data: JSON.stringify({ type: "state-sync", stateVersion: 5 }),
+      data: JSON.stringify({ type: "state-sync", roomId: "room-2", stateVersion: 5 }),
     });
 
     await expect(pending).resolves.toMatchObject({
@@ -215,7 +227,7 @@ describe("serverApi", () => {
     const socket = MockWebSocket.instances[0]!;
     socket.emit("open");
     socket.emit("message", {
-      data: JSON.stringify({ type: "state-sync", stateVersion: 7 }),
+      data: JSON.stringify({ type: "state-sync", roomId: "room-9", stateVersion: 7 }),
     });
 
     await expect(pending).resolves.toMatchObject({

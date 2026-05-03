@@ -1,3 +1,11 @@
+export type GameDiagnostics = {
+  track(
+    name: string,
+    payload?: Record<string, string | number | boolean>,
+  ): void;
+  flush(): void;
+};
+
 export type GameLaunchData = {
   levelId?: string;
   roomId?: string;
@@ -7,6 +15,7 @@ export type GameLaunchData = {
   stateVersion?: number;
   layoutId?: string;
   motionMode?: "full" | "reduced";
+  diagnostics?: GameDiagnostics;
 };
 
 let pendingLaunchData: GameLaunchData = {};

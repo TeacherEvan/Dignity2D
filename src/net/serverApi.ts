@@ -1,4 +1,5 @@
 import type { UploadRetention } from "../upload/ImagePicker";
+import { RoomClient } from "./RoomClient";
 
 export const BACKEND_REQUIRED_MESSAGE =
   "Online rooms and uploads require VITE_SERVER_URL in hosted deployments.";
@@ -182,30 +183,29 @@ export function reconnectRoom(
 ): Promise<number> {
   return new Promise((resolve, reject) => {
     const activeServerUrl = requireServerUrl(serverUrl);
-    const socket = new WebSocket(toWebSocketUrl(activeServerUrl));
+    const client = new RoomClient({
+      roomId,
+      playerId,
+      serverUrl: activeServerUrl,
+      onMessage: (payload) => {
+        if (payload.type === "error") {
+          client.close();
+          reject(new Error(payload.message));
+          return;
+        }
 
-    socket.addEventListener("open", () => {
-      socket.send(JSON.stringify({ type: "reconnect", roomId, playerId }));
+        if (payload.type === "state-sync") {
+          client.close();
+          resolve(payload.stateVersion);
+        }
+      },
+      onError: (error) => {
+        client.close();
+        reject(error);
+      },
     });
 
-    socket.addEventListener("message", (event) => {
-      const payload = JSON.parse(String(event.data)) as
-        | { type: "state-sync"; stateVersion: number }
-        | { type: "error"; message: string };
-
-      if (payload.type === "error") {
-        socket.close();
-        reject(new Error(payload.message));
-        return;
-      }
-
-      socket.close();
-      resolve(payload.stateVersion);
-    });
-
-    socket.addEventListener("error", () => {
-      reject(new Error("Room websocket connection failed."));
-    });
+    client.connect();
   });
 }
 

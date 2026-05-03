@@ -21,15 +21,21 @@ describe("session", () => {
   });
 
   it("preserves layout data in pending launch state", () => {
+    const diagnostics = {
+      track: () => undefined,
+      flush: () => undefined,
+    };
     setPendingLaunchData({
       imageId: "img-1",
       layoutId: "portrait-phone-standard",
       motionMode: "reduced",
+      diagnostics,
     });
     expect(getPendingLaunchData()).toEqual({
       imageId: "img-1",
       layoutId: "portrait-phone-standard",
       motionMode: "reduced",
+      diagnostics,
     });
   });
 });

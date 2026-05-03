@@ -4,7 +4,17 @@ import {
   resolveLayoutWithPreference,
 } from "./display/DeviceLayout";
 import { readDisplayProfileFromWindow } from "./display/DisplayProfile";
-import { loadLayoutPreference } from "./display/LayoutPreferences";
+import {
+  loadLayoutPreference,
+  saveLayoutPreference,
+  type Handedness,
+} from "./display/LayoutPreferences";
+import {
+  createEventTracker,
+  type DiagnosticEvent,
+  type DiagnosticEventName,
+  type DiagnosticPayload,
+} from "./diagnostics/EventTracker";
 import type { GameLaunchData } from "./session";
 import { createWelcomeScreenHtml } from "./welcome/WelcomeScreen";
 
@@ -13,6 +23,15 @@ type LauncherState = {
   selectedImageId: string;
   selectedImageUrl?: string;
   selectedFileName?: string;
+};
+
+const LAUNCHER_IGNITION_MS = 820;
+
+type LauncherMountOptions = {
+  diagnostics?: {
+    sink?: (events: DiagnosticEvent[]) => void;
+    now?: () => number;
+  };
 };
 
 function formatRoomFailureStatus(error: unknown, action: "join" | "create"): string {
@@ -40,7 +59,7 @@ function resolveMotionMode(): "full" | "reduced" {
     : "full";
 }
 
-export function mountLauncher(): void {
+export function mountLauncher(options: LauncherMountOptions = {}): void {
   const app = document.createElement("div");
   app.id = "app-shell";
   app.innerHTML = createWelcomeScreenHtml();
@@ -56,6 +75,24 @@ export function mountLauncher(): void {
   const savedLayout = loadLayoutPreference(displayProfile.deviceClass);
   const resolvedLayout = resolveLayoutWithPreference(displayProfile, savedLayout);
   const resolvedLayoutId = resolvedLayout.id;
+  let activeLayoutPreference =
+    savedLayout ?? {
+      layoutId: layout.id,
+      joystickScale: 1,
+      handedness: "left" as Handedness,
+    };
+  const eventTracker = createEventTracker({
+    sink: options.diagnostics?.sink,
+    now: options.diagnostics?.now,
+  });
+
+  const emitDiagnostic = (
+    name: DiagnosticEventName,
+    payload: DiagnosticPayload = {},
+  ): void => {
+    eventTracker.track(name, payload);
+    eventTracker.flush();
+  };
 
   const shell = document.querySelector<HTMLElement>("#launcher-shell");
   const motionMode = resolveMotionMode();
@@ -64,7 +101,25 @@ export function mountLauncher(): void {
     shell.dataset.deviceClass = displayProfile.deviceClass;
     shell.dataset.layoutId = resolvedLayoutId;
     shell.dataset.motionMode = motionMode;
+    shell.dataset.launchPhase = isReducedMotion ? "ready" : "igniting";
+    shell.dataset.uploadState = "empty";
   }
+
+  if (shell && !isReducedMotion) {
+    window.setTimeout(() => {
+      if (shell.dataset.launchPhase === "igniting") {
+        shell.dataset.launchPhase = "ready";
+      }
+    }, LAUNCHER_IGNITION_MS);
+  }
+
+  emitDiagnostic("welcome_viewed");
+  emitDiagnostic("display_detected", {
+    deviceClass: displayProfile.deviceClass,
+    orientation: displayProfile.orientation,
+    compactHud: displayProfile.compactHud,
+  });
+  emitDiagnostic("layout_loaded", { layoutId: resolvedLayoutId });
 
   const status = document.querySelector<HTMLParagraphElement>("#home-status");
   const roomInput = document.querySelector<HTMLInputElement>("#room-id-input");
@@ -90,6 +145,31 @@ export function mountLauncher(): void {
   );
   const uploadTriggerButton = document.querySelector<HTMLButtonElement>(
     "#upload-trigger-button",
+  );
+  const settingsButton = document.querySelector<HTMLButtonElement>(
+    "#settings-button",
+  );
+  const accessibilityButton = document.querySelector<HTMLButtonElement>(
+    "#accessibility-button",
+  );
+  const settingsPanel = document.querySelector<HTMLElement>("#settings-panel");
+  const accessibilityPanel = document.querySelector<HTMLElement>(
+    "#accessibility-panel",
+  );
+  const settingsHandedness = document.querySelector<HTMLSelectElement>(
+    "#settings-handedness",
+  );
+  const settingsJoystickScale = document.querySelector<HTMLInputElement>(
+    "#settings-joystick-scale",
+  );
+  const settingsJoystickScaleReadout = document.querySelector<HTMLElement>(
+    "#settings-joystick-scale-readout",
+  );
+  const accessibilityMotionMode = document.querySelector<HTMLElement>(
+    "#accessibility-motion-mode",
+  );
+  const accessibilityGuidance = document.querySelector<HTMLElement>(
+    "#accessibility-guidance",
   );
 
   let activeCueTimer = 0;
@@ -137,6 +217,9 @@ export function mountLauncher(): void {
     uploadPreview.src = url;
     uploadPreview.style.display = "block";
     uploadFilename.textContent = fileName;
+    if (shell) {
+      shell.dataset.uploadState = "ready";
+    }
   };
 
   const startGame = async (data: GameLaunchData): Promise<void> => {
@@ -150,6 +233,7 @@ export function mountLauncher(): void {
       imageUrl: state.selectedImageUrl,
       layoutId: resolvedLayoutId,
       motionMode,
+      diagnostics: eventTracker,
       ...data,
     });
     if (shell) {
@@ -159,6 +243,71 @@ export function mountLauncher(): void {
       returnButton.style.display = "block";
     }
   };
+
+  const updateSettingsReadout = (value: number): void => {
+    if (settingsJoystickScaleReadout) {
+      settingsJoystickScaleReadout.textContent = `${value.toFixed(2)}x`;
+    }
+  };
+
+  const syncSettingsControls = (): void => {
+    if (settingsHandedness) {
+      settingsHandedness.value = activeLayoutPreference.handedness;
+    }
+    if (settingsJoystickScale) {
+      settingsJoystickScale.value = activeLayoutPreference.joystickScale.toFixed(2);
+    }
+    updateSettingsReadout(activeLayoutPreference.joystickScale);
+  };
+
+  const saveCurrentLayoutPreference = (): void => {
+    saveLayoutPreference(displayProfile.deviceClass, {
+      layoutId: layout.id,
+      joystickScale: activeLayoutPreference.joystickScale,
+      handedness: activeLayoutPreference.handedness,
+    });
+    emitDiagnostic("layout_saved", { layoutId: layout.id });
+    setStatus("Settings saved for this device.", "cool");
+  };
+
+  const setPanelVisibility = (
+    panel: HTMLElement | null,
+    visible: boolean,
+  ): void => {
+    if (!panel) return;
+    panel.hidden = !visible;
+    if (!shell) return;
+
+    if (visible) {
+      shell.dataset.openPanel = panel.id;
+      return;
+    }
+
+    if (shell.dataset.openPanel === panel.id) {
+      delete shell.dataset.openPanel;
+    }
+  };
+
+  const closePanels = (): void => {
+    setPanelVisibility(settingsPanel, false);
+    setPanelVisibility(accessibilityPanel, false);
+  };
+
+  const renderAccessibilityPanel = (): void => {
+    if (accessibilityMotionMode) {
+      accessibilityMotionMode.textContent = isReducedMotion
+        ? "Reduced motion active"
+        : "Full motion active";
+    }
+    if (accessibilityGuidance) {
+      accessibilityGuidance.textContent = isReducedMotion
+        ? "Motion is kept steady and signal cues stay readable without animated drift."
+        : "Motion uses slow drift and signal cues to reinforce state without crowding the play surface.";
+    }
+  };
+
+  syncSettingsControls();
+  renderAccessibilityPanel();
 
   returnButton?.addEventListener("click", async () => {
     const { stopGameSession } = await import("./bootstrap");
@@ -190,7 +339,42 @@ export function mountLauncher(): void {
   bindCue(joinRoomButton, "join-room");
   bindCue(uploadTriggerButton, "upload");
 
+  settingsButton?.addEventListener("click", () => {
+    const willOpen = settingsPanel ? settingsPanel.hidden === true : true;
+    closePanels();
+    syncSettingsControls();
+    setPanelVisibility(settingsPanel, willOpen);
+  });
+
+  accessibilityButton?.addEventListener("click", () => {
+    const willOpen = accessibilityPanel ? accessibilityPanel.hidden === true : true;
+    closePanels();
+    renderAccessibilityPanel();
+    setPanelVisibility(accessibilityPanel, willOpen);
+  });
+
+  settingsHandedness?.addEventListener("change", () => {
+    activeLayoutPreference = {
+      ...activeLayoutPreference,
+      layoutId: layout.id,
+      handedness: settingsHandedness.value === "right" ? "right" : "left",
+    };
+    saveCurrentLayoutPreference();
+  });
+
+  settingsJoystickScale?.addEventListener("input", () => {
+    const nextScale = Number.parseFloat(settingsJoystickScale.value);
+    activeLayoutPreference = {
+      ...activeLayoutPreference,
+      layoutId: layout.id,
+      joystickScale: Number.isFinite(nextScale) ? nextScale : 1,
+    };
+    updateSettingsReadout(activeLayoutPreference.joystickScale);
+    saveCurrentLayoutPreference();
+  });
+
   quickPlayButton?.addEventListener("click", () => {
+      emitDiagnostic("solo_started", { mode: "solo" });
       void startGame({
         imageId: state.selectedImageId,
         imageUrl: state.selectedImageUrl,
@@ -217,6 +401,8 @@ export function mountLauncher(): void {
         }
         updateRoomLabel(`Room ready: ${session.roomId}`);
         setStatus(`Room ${session.roomId} ready.`);
+        emitDiagnostic("room_created", { mode: "multiplayer" });
+        emitDiagnostic("multiplayer_started", { mode: "multiplayer" });
         await startGame({
           roomId: session.roomId,
           playerId: session.playerId,
@@ -249,6 +435,8 @@ export function mountLauncher(): void {
         }
         updateRoomLabel(`Joined room: ${session.roomId}`);
         setStatus(`Joined ${session.roomId}.`);
+        emitDiagnostic("room_joined", { mode: "multiplayer" });
+        emitDiagnostic("multiplayer_started", { mode: "multiplayer" });
         await startGame({
           roomId: session.roomId,
           playerId: session.playerId,

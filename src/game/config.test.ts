@@ -9,9 +9,11 @@ vi.mock("../scenes/GameScene", () => ({
 }));
 
 import { createGameConfig } from "./config";
+import { setPendingLaunchData } from "../session";
 
 describe("createGameConfig", () => {
   it("builds a Phaser config around the lazily imported GameScene", async () => {
+    setPendingLaunchData({ layoutId: "portrait-phone-standard" });
     const runtime = {
       WEBGL: "WEBGL",
       Scale: {
@@ -29,5 +31,22 @@ describe("createGameConfig", () => {
       autoCenter: "CENTER_BOTH",
     });
     expect(config.scene).toEqual([sceneState.GameScene]);
+  });
+
+  it("derives viewport size from the pending launch layout", async () => {
+    setPendingLaunchData({ layoutId: "desktop-standard" });
+
+    const runtime = {
+      WEBGL: "WEBGL",
+      Scale: {
+        FIT: "FIT",
+        CENTER_BOTH: "CENTER_BOTH",
+      },
+    } as const;
+
+    const config = await createGameConfig(runtime as never);
+
+    expect(config.width).toBe(960);
+    expect(config.height).toBe(720);
   });
 });

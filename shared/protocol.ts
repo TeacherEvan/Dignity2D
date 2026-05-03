@@ -84,6 +84,29 @@ export function isClientMessage(value: unknown): value is ClientMessage {
   }
 }
 
+export function isServerMessage(value: unknown): value is ServerMessage {
+  if (!isRecord(value)) return false;
+
+  switch (value.type) {
+    case "room-created":
+      return isString(value.roomId);
+    case "room-joined":
+      return isString(value.roomId) && isString(value.playerId);
+    case "state-sync":
+      return isString(value.roomId) && isFiniteNumber(value.stateVersion);
+    case "capture-commit":
+      return (
+        isString(value.roomId) &&
+        isString(value.captureId) &&
+        isFiniteNumber(value.revealedRatio)
+      );
+    case "error":
+      return isString(value.message);
+    default:
+      return false;
+  }
+}
+
 export function makeRoomCreated(roomId: string): ServerMessage {
   return { type: "room-created", roomId };
 }

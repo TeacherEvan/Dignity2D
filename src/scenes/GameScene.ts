@@ -1,4 +1,6 @@
 import Phaser from "phaser";
+import { RoomClient } from "../net/RoomClient";
+import { DEFAULT_SERVER_URL } from "../net/serverApi";
 import { commitCaptureFromTrail } from "../game/capture/captureArea";
 import { movePlayer } from "../game/capture/trailState";
 import {
@@ -18,6 +20,7 @@ import {
   calculateRevealPercentText,
   makeMaskResolution,
 } from "../render/RevealMask";
+import { getStandardLayout } from "../display/DeviceLayout";
 import { getTerritoryStage } from "../progression/territoryProgression";
 import type { GameLaunchData } from "../session";
 import { PALETTE } from "../theme/palette";
@@ -38,6 +41,85 @@ export type GameSceneFrameInput = {
   now: number;
   playerId?: string;
 };
+
+export type SceneDiagnosticEvent = {
+  name: "capture_committed" | "trail_cancelled" | "enemy_collision";
+  payload: Record<string, string | number | boolean>;
+};
+
+export type SceneLayoutMetrics = {
+  boardSize: { width: number; height: number };
+  boardOrigin: Point;
+  hudTop: number;
+  previewY: number;
+};
+
+function resolveLayoutContext(layoutId?: string) {
+  switch (layoutId) {
+    case "desktop-standard":
+      return {
+        deviceClass: "desktop" as const,
+        orientation: "landscape" as const,
+        compactHud: false,
+      };
+    case "portrait-tablet-standard":
+      return {
+        deviceClass: "tablet" as const,
+        orientation: "portrait" as const,
+        compactHud: false,
+      };
+    case "landscape-tablet-standard":
+      return {
+        deviceClass: "tablet" as const,
+        orientation: "landscape" as const,
+        compactHud: false,
+      };
+    case "landscape-phone-standard":
+      return {
+        deviceClass: "phone" as const,
+        orientation: "landscape" as const,
+        compactHud: true,
+      };
+    default:
+      return {
+        deviceClass: "phone" as const,
+        orientation: "portrait" as const,
+        compactHud: true,
+      };
+  }
+}
+
+export function resolveSceneLayoutMetrics(
+  layoutId: string | undefined,
+  viewportWidth: number,
+  viewportHeight: number,
+): SceneLayoutMetrics {
+  const layout = getStandardLayout(resolveLayoutContext(layoutId));
+  const horizontalPadding = 24;
+  const bottomPadding = layout.hud.compact ? 120 : 88;
+  const boardTop = layout.hud.topOffset + (layout.hud.compact ? 114 : 80);
+  const boardWidth = Math.max(
+    240,
+    Math.min(layout.board.maxWidth, viewportWidth - horizontalPadding * 2),
+  );
+  const boardHeight = Math.max(
+    240,
+    Math.min(layout.board.maxHeight, viewportHeight - boardTop - bottomPadding),
+  );
+
+  return {
+    boardSize: {
+      width: Math.round(boardWidth),
+      height: Math.round(boardHeight),
+    },
+    boardOrigin: {
+      x: Math.round((viewportWidth - boardWidth) / 2),
+      y: boardTop,
+    },
+    hudTop: layout.hud.topOffset,
+    previewY: boardTop - (layout.hud.compact ? 46 : 38),
+  };
+}
 
 function clampPoint(
   point: Point,
@@ -75,10 +157,47 @@ function stepEnemies(
 }
 
 export function createSceneGameState(levelId = "solo-default"): GameState {
+  return createSceneGameStateForSize(levelId, BOARD_SIZE);
+}
+
+export function createSceneGameStateForLaunch(
+  launchData: GameLaunchData,
+  boardSize: { width: number; height: number },
+): GameState {
+  const levelId = launchData.levelId ?? "solo-default";
+  const baseState = createInitialGameState(
+    levelId,
+    boardSize.width,
+    boardSize.height,
+  );
+
+  if (launchData.roomId && launchData.playerId) {
+    return {
+      ...baseState,
+      players: [
+        {
+          ...baseState.players[0],
+          id: launchData.playerId,
+        },
+      ],
+      enemies: [],
+    };
+  }
+
+  return {
+    ...baseState,
+    enemies: createEnemyWave(1, baseState.imageSize),
+  };
+}
+
+export function createSceneGameStateForSize(
+  levelId = "solo-default",
+  boardSize: { width: number; height: number },
+): GameState {
   const state = createInitialGameState(
     levelId,
-    BOARD_SIZE.width,
-    BOARD_SIZE.height,
+    boardSize.width,
+    boardSize.height,
   );
   return {
     ...state,
@@ -86,13 +205,22 @@ export function createSceneGameState(levelId = "solo-default"): GameState {
   };
 }
 
-export function advanceGameState(
+export function getScenePerformanceFallbackReason(
+  prefersReducedMotion: boolean,
+): string | null {
+  return prefersReducedMotion ? "reduced-motion" : null;
+}
+
+export function advanceGameStateWithDiagnostics(
   state: GameState,
   input: GameSceneFrameInput,
-): GameState {
+): { state: GameState; events: SceneDiagnosticEvent[] } {
+  const events: SceneDiagnosticEvent[] = [];
   const playerId = input.playerId ?? PLAYER_ID;
   const currentPlayer = state.players.find((player) => player.id === playerId);
-  if (!currentPlayer) return state;
+  if (!currentPlayer) {
+    return { state, events };
+  }
 
   let nextState: GameState = {
     ...state,
@@ -116,7 +244,9 @@ export function advanceGameState(
   const movedPlayer = nextState.players.find(
     (player) => player.id === playerId,
   );
-  if (!movedPlayer) return nextState;
+  if (!movedPlayer) {
+    return { state: nextState, events };
+  }
 
   if (
     currentPlayer.mode === "drawing" &&
@@ -128,22 +258,38 @@ export function advanceGameState(
     if (nextState.captures.length > captureCount) {
       const captureArea = nextState.captures.at(-1)?.area ?? 0;
       nextState = awardCaptureScore(nextState, playerId, captureArea);
+      events.push({
+        name: "capture_committed",
+        payload: { revealedRatio: nextState.revealedRatio },
+      });
     }
   }
 
   const activeTrail = nextState.players.find(
     (player) => player.id === playerId,
   )?.activeTrail;
-  if (
+  const hitEnemy =
     activeTrail &&
-    nextState.enemies.some((enemy) =>
+    nextState.enemies.find((enemy) =>
       circleHitsPolyline(enemy.position, ENEMY_RADIUS, activeTrail.points),
-    )
-  ) {
+    );
+  if (hitEnemy) {
     nextState = cancelTrailOnProjectileHit(nextState, playerId);
+    events.push({ name: "trail_cancelled", payload: {} });
+    events.push({
+      name: "enemy_collision",
+      payload: { enemyKind: hitEnemy.kind },
+    });
   }
 
-  return nextState;
+  return { state: nextState, events };
+}
+
+export function advanceGameState(
+  state: GameState,
+  input: GameSceneFrameInput,
+): GameState {
+  return advanceGameStateWithDiagnostics(state, input).state;
 }
 
 export function makeSceneLaunchData(data: GameLaunchData): GameLaunchData {
@@ -181,7 +327,9 @@ export function makeGameStatusText(
     return "Image secured";
   }
   if (launchData.roomId) {
-    return `Room ${launchData.roomId}`;
+    return launchData.stateVersion !== undefined
+      ? `Room ${launchData.roomId} · Sync ${launchData.stateVersion}`
+      : `Room ${launchData.roomId}`;
   }
   if (launchData.imageId) {
     return `Image ${launchData.imageId}`;
@@ -193,6 +341,9 @@ export class GameScene extends Phaser.Scene {
   private state!: GameState;
   private readonly joystick = new VirtualJoystick();
   private cursors?: Phaser.Types.Input.Keyboard.CursorKeys;
+  private roomClient: RoomClient | null = null;
+  private inputSequence = 0;
+  private activePlayerId = PLAYER_ID;
   private boardOrigin = { x: 0, y: 0 };
   private revealText?: Phaser.GameObjects.Text;
   private scoreText?: Phaser.GameObjects.Text;
@@ -207,6 +358,7 @@ export class GameScene extends Phaser.Scene {
   private previewLabel?: Phaser.GameObjects.Text;
   private hudSnapshot: HudSnapshot | null = null;
   private prefersReducedMotion = false;
+  private performanceFallbackLogged = false;
 
   constructor() {
     super("GameScene");
@@ -217,6 +369,7 @@ export class GameScene extends Phaser.Scene {
       ...getPendingLaunchData(),
       ...data,
     });
+    this.activePlayerId = this.launchData.playerId ?? PLAYER_ID;
   }
 
   preload(): void {
@@ -226,34 +379,37 @@ export class GameScene extends Phaser.Scene {
   }
 
   create(): void {
-    this.state = createSceneGameState(this.launchData.levelId);
+    const layoutMetrics = resolveSceneLayoutMetrics(
+      this.launchData.layoutId,
+      this.scale.width,
+      this.scale.height,
+    );
+    this.state = createSceneGameStateForLaunch(this.launchData, layoutMetrics.boardSize);
     this.prefersReducedMotion = this.launchData.motionMode === "reduced";
     this.cursors = this.input.keyboard?.createCursorKeys();
 
     const maskSize = makeMaskResolution(
-      BOARD_SIZE.width,
-      BOARD_SIZE.height,
+      this.state.imageSize.width,
+      this.state.imageSize.height,
       640,
     );
-    this.boardOrigin = {
-      x: Math.round((this.scale.width - maskSize.width) / 2),
-      y: 156,
-    };
+    this.boardOrigin = layoutMetrics.boardOrigin;
+    const boardSize = this.state.imageSize;
 
     this.add
       .rectangle(
-        this.boardOrigin.x + BOARD_SIZE.width / 2,
-        this.boardOrigin.y + BOARD_SIZE.height / 2,
-        BOARD_SIZE.width,
-        BOARD_SIZE.height,
+        this.boardOrigin.x + boardSize.width / 2,
+        this.boardOrigin.y + boardSize.height / 2,
+        boardSize.width,
+        boardSize.height,
         PALETTE.VOID,
       )
       .setStrokeStyle(3, PALETTE.GOLD);
 
     this.previewFrame = this.add
       .rectangle(
-        this.boardOrigin.x + BOARD_SIZE.width / 2,
-        110,
+        this.boardOrigin.x + boardSize.width / 2,
+        layoutMetrics.previewY,
         150,
         84,
         PALETTE.BORDER,
@@ -261,16 +417,16 @@ export class GameScene extends Phaser.Scene {
       .setStrokeStyle(2, PALETTE.SAND);
     if (this.launchData.imageUrl && this.textures.exists("selected-preview")) {
       this.previewImage = this.add.image(
-        this.boardOrigin.x + BOARD_SIZE.width / 2,
-        110,
+        this.boardOrigin.x + boardSize.width / 2,
+        layoutMetrics.previewY,
         "selected-preview",
       );
       this.previewImage.setDisplaySize(142, 76);
     }
     this.previewLabel = this.add
       .text(
-        this.boardOrigin.x + BOARD_SIZE.width / 2,
-        66,
+        this.boardOrigin.x + boardSize.width / 2,
+        Math.max(24, layoutMetrics.previewY - 44),
         this.launchData.imageUrl ? "Uploaded preview" : "Default hidden image",
         {
           color: PALETTE.css.SAND,
@@ -290,13 +446,13 @@ export class GameScene extends Phaser.Scene {
       color: PALETTE.css.CYAN,
       fontSize: "18px",
     });
-    this.scoreText = this.add.text(24, 52, "Score 0", {
+    this.scoreText = this.add.text(24, layoutMetrics.hudTop + 28, "Score 0", {
       color: PALETTE.css.GOLD,
       fontSize: "18px",
     });
     this.statusText = this.add.text(
       24,
-      80,
+      layoutMetrics.hudTop + 56,
       `Mask ${maskSize.width}x${maskSize.height}`,
       {
         color: PALETTE.css.SAND,
@@ -311,13 +467,43 @@ export class GameScene extends Phaser.Scene {
     this.input.on("pointermove", (pointer: Phaser.Input.Pointer) => {
       if (!pointer.isDown) return;
       this.joystick.setDirection({
-        x: pointer.x - (this.boardOrigin.x + BOARD_SIZE.width / 2),
-        y: pointer.y - (this.boardOrigin.y + BOARD_SIZE.height / 2),
+        x: pointer.x - (this.boardOrigin.x + boardSize.width / 2),
+        y: pointer.y - (this.boardOrigin.y + boardSize.height / 2),
       });
     });
     this.input.on("pointerup", () => {
       this.joystick.setDirection({ x: 0, y: 0 });
     });
+
+    if (this.launchData.roomId && this.launchData.playerId && DEFAULT_SERVER_URL) {
+      this.roomClient = new RoomClient({
+        roomId: this.launchData.roomId,
+        playerId: this.launchData.playerId,
+        serverUrl: DEFAULT_SERVER_URL,
+        onMessage: (message) => {
+          if (message.type === "state-sync") {
+            this.launchData.stateVersion = message.stateVersion;
+            this.renderState();
+          }
+        },
+      });
+      this.roomClient.connect();
+      this.events.once("shutdown", () => {
+        this.roomClient?.close();
+        this.roomClient = null;
+      });
+    }
+
+    const fallbackReason = getScenePerformanceFallbackReason(
+      this.prefersReducedMotion,
+    );
+    if (fallbackReason && !this.performanceFallbackLogged) {
+      this.launchData.diagnostics?.track("performance_fallback", {
+        reason: fallbackReason,
+      });
+      this.launchData.diagnostics?.flush();
+      this.performanceFallbackLogged = true;
+    }
 
     this.renderState();
   }
@@ -329,11 +515,23 @@ export class GameScene extends Phaser.Scene {
         ? keyboardDirection
         : this.joystick.getDirection();
 
-    this.state = advanceGameState(this.state, {
+    const frameResult = advanceGameStateWithDiagnostics(this.state, {
       direction,
       deltaMs: delta,
       now: time,
+      playerId: this.activePlayerId,
     });
+    this.state = frameResult.state;
+    frameResult.events.forEach((event) => {
+      this.launchData.diagnostics?.track(event.name, event.payload);
+    });
+    if (frameResult.events.length > 0) {
+      this.launchData.diagnostics?.flush();
+    }
+    if (this.roomClient) {
+      this.inputSequence += 1;
+      this.roomClient.sendInputFrame(direction, this.inputSequence);
+    }
     this.renderState();
   }
 

@@ -20,6 +20,10 @@ export async function startGameSession(
     return gameInstance;
   }
 
+  const { resolveRuntimeViewport } = await import("./game/config");
+  const viewport = resolveRuntimeViewport(data.layoutId);
+  gameInstance.scale.resize(viewport.width, viewport.height);
+
   gameInstance.scene.start("GameScene", data);
   return gameInstance;
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isClientMessage, makeRoomCreated } from "./protocol";
+import { isClientMessage, isServerMessage, makeRoomCreated } from "./protocol";
 
 describe("protocol", () => {
   it("accepts create room messages", () => {
@@ -37,6 +37,18 @@ describe("protocol", () => {
 
   it("rejects unknown messages", () => {
     expect(isClientMessage({ type: "bad" })).toBe(false);
+  });
+
+  it("accepts state-sync server messages", () => {
+    expect(
+      isServerMessage({ type: "state-sync", roomId: "room-1", stateVersion: 2 }),
+    ).toBe(true);
+  });
+
+  it("rejects malformed server messages", () => {
+    expect(
+      isServerMessage({ type: "capture-commit", roomId: "room-1", captureId: 1 }),
+    ).toBe(false);
   });
 
   it("creates room-created server message", () => {

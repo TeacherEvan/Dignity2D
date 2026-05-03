@@ -8,11 +8,15 @@ vi.mock("phaser", () => ({
 
 import {
   advanceGameState,
+  advanceGameStateWithDiagnostics,
   BOARD_SIZE,
   createSceneGameState,
+  createSceneGameStateForLaunch,
+  getScenePerformanceFallbackReason,
   makeHudSnapshot,
   makeGameStatusText,
   makeSceneLaunchData,
+  resolveSceneLayoutMetrics,
 } from "./GameScene";
 
 describe("GameScene helpers", () => {
@@ -150,14 +154,16 @@ describe("GameScene helpers", () => {
       makeGameStatusText(
         {
           roomId: "room-1",
+          playerId: "p2",
           imageId: "img-1",
           imageUrl: "https://private.test/img",
+          stateVersion: 4,
         },
         false,
         0,
         "Border Camp",
       ),
-    ).toBe("Room room-1");
+    ).toBe("Room room-1 · Sync 4");
   });
 
   it("shows secured status when the game is won", () => {
@@ -180,6 +186,109 @@ describe("GameScene helpers", () => {
     });
     expect(launchData.layoutId).toBe("portrait-phone-standard");
     expect(launchData.motionMode).toBe("reduced");
+  });
+
+  it("derives runtime board geometry from the resolved layout id", () => {
+    const portraitPhone = resolveSceneLayoutMetrics(
+      "portrait-phone-standard",
+      390,
+      844,
+    );
+    const desktop = resolveSceneLayoutMetrics("desktop-standard", 960, 720);
+
+    expect(portraitPhone.boardSize).toEqual({ width: 342, height: 560 });
+    expect(portraitPhone.boardOrigin).toEqual({ x: 24, y: 132 });
+    expect(portraitPhone.hudTop).toBe(18);
+
+    expect(desktop.boardSize).toEqual({ width: 720, height: 528 });
+    expect(desktop.boardOrigin).toEqual({ x: 120, y: 104 });
+    expect(desktop.hudTop).toBe(24);
+  });
+
+  it("seeds multiplayer launches with the room player id and no solo enemy wave", () => {
+    const state = createSceneGameStateForLaunch(
+      {
+        roomId: "room-1",
+        playerId: "p2",
+        stateVersion: 3,
+      },
+      BOARD_SIZE,
+    );
+
+    expect(state.players[0]?.id).toBe("p2");
+    expect(state.enemies).toEqual([]);
+  });
+
+  it("reports capture and collision diagnostics from frame advancement", () => {
+    const captureState = createSceneGameState();
+    captureState.players[0] = {
+      ...captureState.players[0],
+      position: { x: 40, y: 40 },
+      lastSafePosition: { x: 0, y: 10 },
+      mode: "drawing",
+      activeTrail: {
+        playerId: "p1",
+        startedAt: 0,
+        points: [
+          { x: 0, y: 10 },
+          { x: 40, y: 10 },
+          { x: 40, y: 40 },
+        ],
+      },
+    };
+
+    const captureResult = advanceGameStateWithDiagnostics(captureState, {
+      direction: { x: -1, y: -0.75 },
+      deltaMs: 250,
+      now: 250,
+    });
+
+    expect(captureResult.events).toEqual([
+      {
+        name: "capture_committed",
+        payload: { revealedRatio: captureResult.state.revealedRatio },
+      },
+    ]);
+
+    const collisionState = createSceneGameState();
+    collisionState.players[0] = {
+      ...collisionState.players[0],
+      position: { x: 40, y: 40 },
+      lastSafePosition: { x: 0, y: 0 },
+      mode: "drawing",
+      activeTrail: {
+        playerId: "p1",
+        startedAt: 0,
+        points: [
+          { x: 0, y: 0 },
+          { x: 80, y: 80 },
+        ],
+      },
+    };
+    collisionState.enemies = [
+      {
+        id: "enemy-1",
+        kind: "chaser",
+        position: { x: 42, y: 42 },
+        velocity: { x: 0, y: 0 },
+      },
+    ];
+
+    const collisionResult = advanceGameStateWithDiagnostics(collisionState, {
+      direction: { x: 0, y: 0 },
+      deltaMs: 16,
+      now: 16,
+    });
+
+    expect(collisionResult.events).toEqual([
+      { name: "trail_cancelled", payload: {} },
+      { name: "enemy_collision", payload: { enemyKind: "chaser" } },
+    ]);
+  });
+
+  it("reports the reduced-motion performance fallback reason", () => {
+    expect(getScenePerformanceFallbackReason(true)).toBe("reduced-motion");
+    expect(getScenePerformanceFallbackReason(false)).toBeNull();
   });
 
   it("builds a HUD snapshot from score, captures, and status text", () => {
