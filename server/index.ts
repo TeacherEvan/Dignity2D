@@ -311,6 +311,8 @@ export function createAppServer(): AppServer {
             type: "state-sync",
             roomId: room.id,
             stateVersion: room.stateVersion,
+            imageId: room.imageId,
+            playerIds: room.players.map((player) => player.id),
           });
           return;
         }
@@ -328,6 +330,8 @@ export function createAppServer(): AppServer {
             type: "state-sync",
             roomId: room.id,
             stateVersion: room.stateVersion,
+            imageId: room.imageId,
+            playerIds: room.players.map((player) => player.id),
           });
           return;
         }

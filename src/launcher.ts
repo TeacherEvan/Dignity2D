@@ -406,6 +406,7 @@ export function mountLauncher(options: LauncherMountOptions = {}): void {
         await startGame({
           roomId: session.roomId,
           playerId: session.playerId,
+          roomPlayerIds: session.playerIds,
           imageId: session.imageId,
           imageUrl: state.selectedImageUrl,
           stateVersion: session.stateVersion,
@@ -440,6 +441,7 @@ export function mountLauncher(options: LauncherMountOptions = {}): void {
         await startGame({
           roomId: session.roomId,
           playerId: session.playerId,
+          roomPlayerIds: session.playerIds,
           imageId: state.selectedImageId,
           imageUrl: state.selectedImageUrl,
           stateVersion: session.stateVersion,

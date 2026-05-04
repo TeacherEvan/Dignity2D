@@ -1,4 +1,5 @@
 import type { UploadRetention } from "../upload/ImagePicker";
+import type { ServerMessage } from "../../shared/protocol";
 import { RoomClient } from "./RoomClient";
 
 export const BACKEND_REQUIRED_MESSAGE =
@@ -83,7 +84,13 @@ export type RoomCreateResponse = {
 
 export type RoomSession = RoomCreateResponse & {
   stateVersion: number;
+  playerIds: string[];
 };
+
+export type RoomSyncSnapshot = Omit<
+  Extract<ServerMessage, { type: "state-sync" }>,
+  "type" | "roomId"
+>;
 
 export type RoomJoinResponse = {
   roomId: string;
@@ -180,7 +187,7 @@ export function reconnectRoom(
   roomId: string,
   playerId: string,
   serverUrl = DEFAULT_SERVER_URL,
-): Promise<number> {
+): Promise<RoomSyncSnapshot> {
   return new Promise((resolve, reject) => {
     const activeServerUrl = requireServerUrl(serverUrl);
     const client = new RoomClient({
@@ -196,7 +203,11 @@ export function reconnectRoom(
 
         if (payload.type === "state-sync") {
           client.close();
-          resolve(payload.stateVersion);
+          resolve({
+            stateVersion: payload.stateVersion,
+            imageId: payload.imageId,
+            playerIds: payload.playerIds,
+          });
         }
       },
       onError: (error) => {
@@ -214,14 +225,17 @@ export async function createRoomSession(
   serverUrl = DEFAULT_SERVER_URL,
 ): Promise<RoomSession> {
   const room = await createRoom(imageId, serverUrl);
-  const stateVersion = await reconnectRoom(
+  const snapshot = await reconnectRoom(
     room.roomId,
     room.playerId,
     serverUrl,
   );
   return {
     ...room,
-    stateVersion,
+    imageId: snapshot.imageId,
+    playerCount: snapshot.playerIds.length,
+    stateVersion: snapshot.stateVersion,
+    playerIds: snapshot.playerIds,
   };
 }
 
@@ -248,7 +262,7 @@ export async function joinRoomSession(
   serverUrl = DEFAULT_SERVER_URL,
 ): Promise<RoomSession> {
   const joined = await joinRoom(roomId, serverUrl);
-  const stateVersion = await reconnectRoom(
+  const snapshot = await reconnectRoom(
     joined.roomId,
     joined.playerId,
     serverUrl,
@@ -256,7 +270,10 @@ export async function joinRoomSession(
 
   return {
     ...joined,
-    stateVersion,
+    imageId: snapshot.imageId,
+    playerCount: snapshot.playerIds.length,
+    stateVersion: snapshot.stateVersion,
+    playerIds: snapshot.playerIds,
   };
 }
 

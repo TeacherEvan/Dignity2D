@@ -127,10 +127,20 @@ describe("serverApi", () => {
     const socket = MockWebSocket.instances[0]!;
     socket.emit("open");
     socket.emit("message", {
-      data: JSON.stringify({ type: "state-sync", roomId: "room-1", stateVersion: 3 }),
+      data: JSON.stringify({
+        type: "state-sync",
+        roomId: "room-1",
+        stateVersion: 3,
+        imageId: "img-1",
+        playerIds: ["p1", "p2"],
+      }),
     });
 
-    await expect(pending).resolves.toBe(3);
+    await expect(pending).resolves.toEqual({
+      stateVersion: 3,
+      imageId: "img-1",
+      playerIds: ["p1", "p2"],
+    });
     expect(socket.url).toBe("ws://example.test");
   });
 
@@ -153,12 +163,20 @@ describe("serverApi", () => {
     const socket = MockWebSocket.instances[0]!;
     socket.emit("open");
     socket.emit("message", {
-      data: JSON.stringify({ type: "state-sync", roomId: "room-2", stateVersion: 5 }),
+      data: JSON.stringify({
+        type: "state-sync",
+        roomId: "room-2",
+        stateVersion: 5,
+        imageId: "img-2-live",
+        playerIds: ["p2"],
+      }),
     });
 
     await expect(pending).resolves.toMatchObject({
       roomId: "room-2",
       stateVersion: 5,
+      imageId: "img-2-live",
+      playerIds: ["p2"],
     });
   });
 
@@ -227,13 +245,20 @@ describe("serverApi", () => {
     const socket = MockWebSocket.instances[0]!;
     socket.emit("open");
     socket.emit("message", {
-      data: JSON.stringify({ type: "state-sync", roomId: "room-9", stateVersion: 7 }),
+      data: JSON.stringify({
+        type: "state-sync",
+        roomId: "room-9",
+        stateVersion: 7,
+        imageId: "image-9",
+        playerIds: ["p1", "p2"],
+      }),
     });
 
     await expect(pending).resolves.toMatchObject({
       roomId: "room-9",
       playerId: "p2",
       stateVersion: 7,
+      playerIds: ["p1", "p2"],
     });
   });
 

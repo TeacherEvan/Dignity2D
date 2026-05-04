@@ -134,7 +134,13 @@ describe("RoomClient", () => {
     client.connect();
     const socket = MockWebSocket.instances[0]!;
     socket.emit("message", {
-      data: JSON.stringify({ type: "state-sync", roomId: "room-1", stateVersion: 3 }),
+      data: JSON.stringify({
+        type: "state-sync",
+        roomId: "room-1",
+        stateVersion: 3,
+        imageId: "img-1",
+        playerIds: ["p1", "p2"],
+      }),
     });
     socket.emit("message", {
       data: JSON.stringify({ type: "state-sync", roomId: "room-1" }),
@@ -144,6 +150,8 @@ describe("RoomClient", () => {
       type: "state-sync",
       roomId: "room-1",
       stateVersion: 3,
+      imageId: "img-1",
+      playerIds: ["p1", "p2"],
     });
     expect(onError).toHaveBeenCalledWith(new Error("Malformed server message."));
   });

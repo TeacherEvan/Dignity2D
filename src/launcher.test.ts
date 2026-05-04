@@ -268,6 +268,7 @@ describe("launcher layout integration", () => {
     vi.mocked(createRoomSession).mockResolvedValue({
       roomId: "room-7",
       playerId: "p-7",
+      playerIds: ["p-7"],
       playerCount: 1,
       imageId: "img-7",
       stateVersion: 3,
@@ -297,6 +298,7 @@ describe("launcher layout integration", () => {
     vi.mocked(joinRoomSession).mockResolvedValue({
       roomId: "room-9",
       playerId: "p-9",
+      playerIds: ["p-8", "p-9"],
       playerCount: 2,
       imageId: "img-9",
       stateVersion: 4,

@@ -7,6 +7,7 @@ vi.mock("phaser", () => ({
 }));
 
 import {
+  applyRoomStateSyncSnapshot,
   advanceGameState,
   advanceGameStateWithDiagnostics,
   BOARD_SIZE,
@@ -157,13 +158,14 @@ describe("GameScene helpers", () => {
           playerId: "p2",
           imageId: "img-1",
           imageUrl: "https://private.test/img",
+          roomPlayerIds: ["p1", "p2"],
           stateVersion: 4,
         },
         false,
         0,
         "Border Camp",
       ),
-    ).toBe("Room room-1 · Sync 4");
+    ).toBe("Room room-1 · 2 players · Sync 4");
   });
 
   it("shows secured status when the game is won", () => {
@@ -210,13 +212,45 @@ describe("GameScene helpers", () => {
       {
         roomId: "room-1",
         playerId: "p2",
+        roomPlayerIds: ["p1", "p2"],
         stateVersion: 3,
       },
       BOARD_SIZE,
     );
 
+    expect(state.players.map((player) => player.id)).toEqual(["p2", "p1"]);
     expect(state.players[0]?.id).toBe("p2");
     expect(state.enemies).toEqual([]);
+  });
+
+  it("applies room sync snapshots to launch data and player state", () => {
+    const launchData = {
+      roomId: "room-1",
+      playerId: "p2",
+      imageId: "img-1",
+      roomPlayerIds: ["p2"],
+      stateVersion: 1,
+    };
+    const state = createSceneGameStateForLaunch(launchData, BOARD_SIZE);
+
+    const result = applyRoomStateSyncSnapshot(
+      state,
+      launchData,
+      {
+        type: "state-sync",
+        roomId: "room-1",
+        stateVersion: 2,
+        imageId: "img-1-live",
+        playerIds: ["p1", "p2"],
+      },
+    );
+
+    expect(result.launchData).toMatchObject({
+      imageId: "img-1-live",
+      roomPlayerIds: ["p2", "p1"],
+      stateVersion: 2,
+    });
+    expect(result.state.players.map((player) => player.id)).toEqual(["p2", "p1"]);
   });
 
   it("reports capture and collision diagnostics from frame advancement", () => {

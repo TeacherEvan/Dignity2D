@@ -16,7 +16,13 @@ export type ClientMessage =
 export type ServerMessage =
   | { type: "room-created"; roomId: string }
   | { type: "room-joined"; roomId: string; playerId: string }
-  | { type: "state-sync"; roomId: string; stateVersion: number }
+  | {
+      type: "state-sync";
+      roomId: string;
+      stateVersion: number;
+      imageId: string;
+      playerIds: string[];
+    }
   | {
       type: "capture-commit";
       roomId: string;
@@ -93,7 +99,14 @@ export function isServerMessage(value: unknown): value is ServerMessage {
     case "room-joined":
       return isString(value.roomId) && isString(value.playerId);
     case "state-sync":
-      return isString(value.roomId) && isFiniteNumber(value.stateVersion);
+      return (
+        isString(value.roomId) &&
+        isFiniteNumber(value.stateVersion) &&
+        isString(value.imageId) &&
+        Array.isArray(value.playerIds) &&
+        value.playerIds.length > 0 &&
+        value.playerIds.every((playerId) => isString(playerId))
+      );
     case "capture-commit":
       return (
         isString(value.roomId) &&

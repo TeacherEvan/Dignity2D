@@ -172,14 +172,25 @@ export function createSceneGameStateForLaunch(
   );
 
   if (launchData.roomId && launchData.playerId) {
+    const roomPlayerIds = launchData.roomPlayerIds ?? [launchData.playerId];
+    const orderedPlayerIds = [
+      launchData.playerId,
+      ...roomPlayerIds.filter((playerId) => playerId !== launchData.playerId),
+    ];
     return {
       ...baseState,
-      players: [
-        {
-          ...baseState.players[0],
-          id: launchData.playerId,
+      players: orderedPlayerIds.map((playerId, index) => ({
+        ...baseState.players[0],
+        id: playerId,
+        position: {
+          x: baseState.players[0].position.x + index * 18,
+          y: baseState.players[0].position.y + index * 18,
         },
-      ],
+        lastSafePosition: {
+          x: baseState.players[0].lastSafePosition.x + index * 18,
+          y: baseState.players[0].lastSafePosition.y + index * 18,
+        },
+      })),
       enemies: [],
     };
   }
@@ -292,6 +303,58 @@ export function advanceGameState(
   return advanceGameStateWithDiagnostics(state, input).state;
 }
 
+export function applyRoomStateSyncSnapshot(
+  state: GameState,
+  launchData: GameLaunchData,
+  snapshot: {
+    type: "state-sync";
+    roomId: string;
+    stateVersion: number;
+    imageId: string;
+    playerIds: string[];
+  },
+): { state: GameState; launchData: GameLaunchData } {
+  const activePlayerId = launchData.playerId ?? PLAYER_ID;
+  const orderedPlayerIds = [
+    activePlayerId,
+    ...snapshot.playerIds.filter((playerId) => playerId !== activePlayerId),
+  ];
+
+  return {
+    state: {
+      ...state,
+      players: orderedPlayerIds.map((playerId, index) => {
+        const existingPlayer = state.players.find((player) => player.id === playerId);
+        if (existingPlayer) {
+          return existingPlayer;
+        }
+
+        return {
+          ...state.players[0],
+          id: playerId,
+          position: {
+            x: state.players[0].position.x + index * 18,
+            y: state.players[0].position.y + index * 18,
+          },
+          lastSafePosition: {
+            x: state.players[0].lastSafePosition.x + index * 18,
+            y: state.players[0].lastSafePosition.y + index * 18,
+          },
+          activeTrail: null,
+          score: 0,
+          mode: "safe",
+        };
+      }),
+    },
+    launchData: {
+      ...launchData,
+      imageId: snapshot.imageId,
+      roomPlayerIds: orderedPlayerIds,
+      stateVersion: snapshot.stateVersion,
+    },
+  };
+}
+
 export function makeSceneLaunchData(data: GameLaunchData): GameLaunchData {
   return { ...data };
 }
@@ -327,9 +390,14 @@ export function makeGameStatusText(
     return "Image secured";
   }
   if (launchData.roomId) {
+    const playerCount = launchData.roomPlayerIds?.length;
+    const roomLabel =
+      playerCount && playerCount > 1
+        ? `Room ${launchData.roomId} · ${playerCount} players`
+        : `Room ${launchData.roomId}`;
     return launchData.stateVersion !== undefined
-      ? `Room ${launchData.roomId} · Sync ${launchData.stateVersion}`
-      : `Room ${launchData.roomId}`;
+      ? `${roomLabel} · Sync ${launchData.stateVersion}`
+      : roomLabel;
   }
   if (launchData.imageId) {
     return `Image ${launchData.imageId}`;
@@ -351,6 +419,7 @@ export class GameScene extends Phaser.Scene {
   private captureGraphics?: Phaser.GameObjects.Graphics;
   private trailGraphics?: Phaser.GameObjects.Graphics;
   private playerMarker?: Phaser.GameObjects.Arc;
+  private teammateMarkers: Phaser.GameObjects.Arc[] = [];
   private enemyMarkers: Phaser.GameObjects.Arc[] = [];
   private launchData: GameLaunchData = {};
   private previewFrame?: Phaser.GameObjects.Rectangle;
@@ -438,6 +507,9 @@ export class GameScene extends Phaser.Scene {
     this.captureGraphics = this.add.graphics();
     this.trailGraphics = this.add.graphics();
     this.playerMarker = this.add.circle(0, 0, 8, PALETTE.CYAN);
+    this.teammateMarkers = this.state.players.slice(1).map(() =>
+      this.add.circle(0, 0, 6, PALETTE.SAND),
+    );
     this.enemyMarkers = this.state.enemies.map(() =>
       this.add.circle(0, 0, 10, PALETTE.AMBER),
     );
@@ -482,7 +554,13 @@ export class GameScene extends Phaser.Scene {
         serverUrl: DEFAULT_SERVER_URL,
         onMessage: (message) => {
           if (message.type === "state-sync") {
-            this.launchData.stateVersion = message.stateVersion;
+            const synced = applyRoomStateSyncSnapshot(
+              this.state,
+              this.launchData,
+              message,
+            );
+            this.state = synced.state;
+            this.launchData = synced.launchData;
             this.renderState();
           }
         },
@@ -596,6 +674,23 @@ export class GameScene extends Phaser.Scene {
 
     const playerPosition = this.toScreen(player.position);
     this.playerMarker.setPosition(playerPosition.x, playerPosition.y);
+
+    while (this.teammateMarkers.length < this.state.players.length - 1) {
+      this.teammateMarkers.push(this.add.circle(0, 0, 6, PALETTE.SAND));
+    }
+
+    this.state.players.slice(1).forEach((teammate, index) => {
+      const marker = this.teammateMarkers[index];
+      if (!marker) {
+        return;
+      }
+
+      const position = this.toScreen(teammate.position);
+      marker.setPosition(position.x, position.y);
+    });
+    this.teammateMarkers.slice(this.state.players.length - 1).forEach((marker) => {
+      marker.setPosition(-9999, -9999);
+    });
 
     this.state.enemies.forEach((enemy, index) => {
       const marker = this.enemyMarkers[index];

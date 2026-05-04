@@ -41,7 +41,13 @@ describe("protocol", () => {
 
   it("accepts state-sync server messages", () => {
     expect(
-      isServerMessage({ type: "state-sync", roomId: "room-1", stateVersion: 2 }),
+      isServerMessage({
+        type: "state-sync",
+        roomId: "room-1",
+        stateVersion: 2,
+        imageId: "img-1",
+        playerIds: ["p1", "p2"],
+      }),
     ).toBe(true);
   });
 

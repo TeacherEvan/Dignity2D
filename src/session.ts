@@ -10,6 +10,7 @@ export type GameLaunchData = {
   levelId?: string;
   roomId?: string;
   playerId?: string;
+  roomPlayerIds?: string[];
   imageId?: string;
   imageUrl?: string;
   stateVersion?: number;
