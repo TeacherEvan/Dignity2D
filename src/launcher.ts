@@ -20,6 +20,7 @@ import { createWelcomeScreenHtml } from "./welcome/WelcomeScreen";
 
 type LauncherState = {
   roomId: string;
+  playerId?: string;
   selectedImageId: string;
   selectedImageUrl?: string;
   selectedFileName?: string;
@@ -388,6 +389,7 @@ export function mountLauncher(options: LauncherMountOptions = {}): void {
         const { createRoomSession } = await import("./net/serverApi");
         const session = await createRoomSession(state.selectedImageId);
         state.roomId = session.roomId;
+        state.playerId = session.playerId;
         state.selectedImageId = session.imageId;
         if (session.imageUrl) {
           state.selectedImageUrl = session.imageUrl;
@@ -426,9 +428,26 @@ export function mountLauncher(options: LauncherMountOptions = {}): void {
 
       setStatus(`Joining ${roomId}...`);
       try {
+        if (state.roomId === roomId && state.playerId) {
+          const { reconnectRoom } = await import("./net/serverApi");
+          const snapshot = await reconnectRoom(roomId, state.playerId);
+          emitDiagnostic("multiplayer_started", { mode: "multiplayer" });
+          await startGame({
+            roomId,
+            playerId: state.playerId,
+            roomPlayerIds: snapshot.playerIds,
+            imageId: snapshot.imageId,
+            imageUrl: state.selectedImageUrl,
+            stateVersion: snapshot.stateVersion,
+            layoutId: resolvedLayoutId,
+          });
+          return;
+        }
+
         const { joinRoomSession } = await import("./net/serverApi");
         const session = await joinRoomSession(roomId);
         state.roomId = session.roomId;
+        state.playerId = session.playerId;
         state.selectedImageId = session.imageId;
         if (session.imageUrl) {
           state.selectedImageUrl = session.imageUrl;

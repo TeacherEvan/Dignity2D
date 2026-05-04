@@ -8,12 +8,17 @@ vi.mock("./bootstrap", () => ({
 vi.mock("./net/serverApi", () => ({
   createRoomSession: vi.fn(),
   joinRoomSession: vi.fn(),
+  reconnectRoom: vi.fn(),
   uploadImage: vi.fn(),
 }));
 
 import { mountLauncher } from "./launcher";
 import { startGameSession } from "./bootstrap";
-import { createRoomSession, joinRoomSession } from "./net/serverApi";
+import {
+  createRoomSession,
+  joinRoomSession,
+  reconnectRoom,
+} from "./net/serverApi";
 
 describe("launcher layout integration", () => {
   beforeEach(() => {
@@ -43,6 +48,7 @@ describe("launcher layout integration", () => {
     vi.mocked(startGameSession).mockClear();
     vi.mocked(createRoomSession).mockReset();
     vi.mocked(joinRoomSession).mockReset();
+    vi.mocked(reconnectRoom).mockReset();
   });
 
   it("detects display and stores layout metadata on the shell", () => {
@@ -326,6 +332,56 @@ describe("launcher layout integration", () => {
         playerId: "p-9",
         imageId: "img-9",
         stateVersion: 4,
+      }),
+    );
+  });
+
+  it("reconnects the same player after returning to the launcher", async () => {
+    vi.mocked(joinRoomSession).mockResolvedValue({
+      roomId: "room-9",
+      playerId: "p-9",
+      playerIds: ["p-8", "p-9"],
+      playerCount: 2,
+      imageId: "img-9",
+      stateVersion: 4,
+      imageUrl: null,
+      bytes: null,
+      retention: null,
+    });
+    vi.mocked(reconnectRoom).mockResolvedValue({
+      imageId: "img-9",
+      playerIds: ["p-8", "p-9"],
+      stateVersion: 5,
+    });
+
+    mountLauncher();
+    const input = document.querySelector<HTMLInputElement>("#room-id-input");
+    const returnButton = document.querySelector<HTMLButtonElement>(
+      "#return-to-launcher-button",
+    );
+    if (!input || !returnButton) {
+      throw new Error("launcher controls missing in reconnect test");
+    }
+
+    input.value = "room-9";
+    document.querySelector<HTMLButtonElement>("#join-room-button")?.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    returnButton.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    document.querySelector<HTMLButtonElement>("#join-room-button")?.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(joinRoomSession).toHaveBeenCalledTimes(1);
+    expect(reconnectRoom).toHaveBeenCalledWith("room-9", "p-9");
+    expect(startGameSession).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        roomId: "room-9",
+        playerId: "p-9",
+        roomPlayerIds: ["p-8", "p-9"],
+        imageId: "img-9",
+        stateVersion: 5,
       }),
     );
   });

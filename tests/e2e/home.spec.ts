@@ -165,3 +165,45 @@ test("two browser pages can create and join the same multiplayer room", async ({
     await joiner.close();
   }
 });
+
+test("a player can return to the launcher and rejoin the same multiplayer room", async ({
+  browser,
+}) => {
+  const creator = await browser.newPage();
+  const joiner = await browser.newPage();
+
+  try {
+    await creator.goto("/");
+    await joiner.goto("/");
+
+    await creator.locator("#create-room-button").click();
+    await expect(creator.locator("#current-room-label")).toContainText(
+      "Room ready: room-",
+    );
+
+    const roomId = await readRoomId(creator);
+    expect(roomId).toMatch(/^room-\d+$/);
+
+    await joiner.locator("#room-id-input").fill(roomId);
+    await joiner.locator("#join-room-button").click();
+    await expect(joiner.locator("canvas")).toBeVisible();
+
+    await joiner.locator("#return-to-launcher-button").click();
+    await expect(joiner.locator("#launcher-shell")).toBeVisible();
+    await expect(joiner.locator("#room-id-input")).toHaveValue(roomId);
+    await expect(joiner.locator("#current-room-label")).toContainText(
+      `Joined room: ${roomId}`,
+    );
+
+    await joiner.locator("#join-room-button").click();
+
+    await expect(joiner.locator("canvas")).toBeVisible();
+    await expect(joiner.locator("#return-to-launcher-button")).toBeVisible();
+    await expect(joiner.locator("#home-status")).toContainText(
+      `Launching ${roomId}...`,
+    );
+  } finally {
+    await creator.close();
+    await joiner.close();
+  }
+});
