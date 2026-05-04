@@ -16,6 +16,7 @@ import {
   getScenePerformanceFallbackReason,
   makeHudSnapshot,
   makeGameStatusText,
+  makePreviewLabel,
   makeSceneLaunchData,
   resolveSceneLayoutMetrics,
 } from "./GameScene";
@@ -150,7 +151,7 @@ describe("GameScene helpers", () => {
         0,
         "Border Camp",
       ),
-    ).toBe("Image default-image");
+    ).toBe("Signal concealed");
     expect(
       makeGameStatusText(
         {
@@ -165,7 +166,55 @@ describe("GameScene helpers", () => {
         0,
         "Border Camp",
       ),
-    ).toBe("Room room-1 · 2 players · Sync 4");
+    ).toBe("Room room-1 · 2 players linked");
+  });
+
+  it("keeps multiplayer status steady across sync revisions", () => {
+    expect(
+      makeGameStatusText(
+        {
+          roomId: "room-1",
+          playerId: "p2",
+          roomPlayerIds: ["p1", "p2"],
+          stateVersion: 4,
+        },
+        false,
+        0,
+        "Border Camp",
+      ),
+    ).toBe(
+      makeGameStatusText(
+        {
+          roomId: "room-1",
+          playerId: "p2",
+          roomPlayerIds: ["p1", "p2"],
+          stateVersion: 9,
+        },
+        false,
+        0,
+        "Border Camp",
+      ),
+    );
+  });
+
+  it("uses a calm waiting status when a room has only one player", () => {
+    expect(
+      makeGameStatusText(
+        {
+          roomId: "room-1",
+          playerId: "p1",
+          roomPlayerIds: ["p1"],
+        },
+        false,
+        0,
+        "Border Camp",
+      ),
+    ).toBe("Room room-1 · Awaiting second player");
+  });
+
+  it("uses mystery-first preview labels for default and custom images", () => {
+    expect(makePreviewLabel(undefined)).toBe("Concealed image");
+    expect(makePreviewLabel("https://private.test/img")).toBe("Chosen image");
   });
 
   it("shows secured status when the game is won", () => {
@@ -350,6 +399,18 @@ describe("GameScene helpers", () => {
       revealedRatio: 0.28,
       statusText: "Safe Quarter",
       captureCount: 1,
+      won: false,
+    });
+  });
+
+  it("uses concealed-image status for an image-backed solo run before progress advances", () => {
+    const state = createSceneGameState();
+
+    expect(makeHudSnapshot(state, { imageId: "default-image" })).toEqual({
+      score: 0,
+      revealedRatio: 0,
+      statusText: "Signal concealed",
+      captureCount: 0,
       won: false,
     });
   });

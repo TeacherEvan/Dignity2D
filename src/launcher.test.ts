@@ -18,6 +18,7 @@ import {
   createRoomSession,
   joinRoomSession,
   reconnectRoom,
+  uploadImage,
 } from "./net/serverApi";
 
 describe("launcher layout integration", () => {
@@ -49,6 +50,7 @@ describe("launcher layout integration", () => {
     vi.mocked(createRoomSession).mockReset();
     vi.mocked(joinRoomSession).mockReset();
     vi.mocked(reconnectRoom).mockReset();
+    vi.mocked(uploadImage).mockReset();
   });
 
   it("detects display and stores layout metadata on the shell", () => {
@@ -175,7 +177,7 @@ describe("launcher layout integration", () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(document.querySelector("#home-status")?.textContent).toBe(
-      "Join failed. Room is full.",
+      "Join failed. Check the room ID.",
     );
     expect(
       document.querySelector<HTMLParagraphElement>("#home-status")?.dataset
@@ -278,7 +280,7 @@ describe("launcher layout integration", () => {
       playerCount: 1,
       imageId: "img-7",
       stateVersion: 3,
-      imageUrl: null,
+      imageUrl: "https://private.test/img-7",
       bytes: null,
       retention: null,
     });
@@ -290,11 +292,16 @@ describe("launcher layout integration", () => {
     expect(document.querySelector("#current-room-label")?.textContent).toBe(
       "Room ready: room-7",
     );
+    expect(
+      document.querySelector('[data-launcher-upload-label="title"]')?.textContent,
+    ).toBe("Chosen image");
+    expect(document.querySelector("#upload-filename")?.textContent).toBe("img-7");
     expect(startGameSession).toHaveBeenCalledWith(
       expect.objectContaining({
         roomId: "room-7",
         playerId: "p-7",
         imageId: "img-7",
+        imageUrl: undefined,
         stateVersion: 3,
       }),
     );
@@ -308,7 +315,7 @@ describe("launcher layout integration", () => {
       playerCount: 2,
       imageId: "img-9",
       stateVersion: 4,
-      imageUrl: null,
+      imageUrl: "https://private.test/img-9",
       bytes: null,
       retention: null,
     });
@@ -326,12 +333,80 @@ describe("launcher layout integration", () => {
     expect(document.querySelector("#current-room-label")?.textContent).toBe(
       "Joined room: room-9",
     );
+    expect(
+      document.querySelector('[data-launcher-upload-label="title"]')?.textContent,
+    ).toBe("Veiled image");
+    expect(document.querySelector("#upload-filename")?.textContent).toBe(
+      "Default concealed image in use.",
+    );
     expect(startGameSession).toHaveBeenCalledWith(
       expect.objectContaining({
         roomId: "room-9",
         playerId: "p-9",
         imageId: "img-9",
+        imageUrl: undefined,
         stateVersion: 4,
+      }),
+    );
+  });
+
+  it("clears a prior visible preview when joining a room without an image url", async () => {
+    vi.mocked(createRoomSession)
+      .mockResolvedValueOnce({
+        roomId: "room-7",
+        playerId: "p-7",
+        playerIds: ["p-7"],
+        playerCount: 1,
+        imageId: "img-7",
+        stateVersion: 3,
+        imageUrl: "https://private.test/img-7",
+        bytes: null,
+        retention: null,
+      });
+    vi.mocked(joinRoomSession).mockResolvedValue({
+      roomId: "room-9",
+      playerId: "p-9",
+      playerIds: ["p-8", "p-9"],
+      playerCount: 2,
+      imageId: "img-9",
+      stateVersion: 4,
+      imageUrl: null,
+      bytes: null,
+      retention: null,
+    });
+
+    mountLauncher();
+    const roomInput = document.querySelector<HTMLInputElement>("#room-id-input");
+    const returnButton = document.querySelector<HTMLButtonElement>(
+      "#return-to-launcher-button",
+    );
+    const uploadPreview = document.querySelector<HTMLImageElement>("#upload-preview");
+    if (!roomInput || !returnButton || !uploadPreview) {
+      throw new Error("launcher controls missing in preview reset test");
+    }
+
+    document.querySelector<HTMLButtonElement>("#create-room-button")?.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    returnButton.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    roomInput.value = "room-9";
+    document.querySelector<HTMLButtonElement>("#join-room-button")?.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(
+      document.querySelector('[data-launcher-upload-label="title"]')?.textContent,
+    ).toBe("Veiled image");
+    expect(document.querySelector("#upload-filename")?.textContent).toBe(
+      "Default concealed image in use.",
+    );
+    expect(uploadPreview.style.display).toBe("none");
+    expect(startGameSession).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        roomId: "room-9",
+        imageId: "img-9",
+        imageUrl: undefined,
       }),
     );
   });
@@ -384,6 +459,70 @@ describe("launcher layout integration", () => {
         stateVersion: 5,
       }),
     );
+  });
+
+  it("uses solo launch status after returning from a room", async () => {
+    vi.mocked(joinRoomSession).mockResolvedValue({
+      roomId: "room-9",
+      playerId: "p-9",
+      playerIds: ["p-8", "p-9"],
+      playerCount: 2,
+      imageId: "img-9",
+      stateVersion: 4,
+      imageUrl: null,
+      bytes: null,
+      retention: null,
+    });
+
+    mountLauncher();
+    const input = document.querySelector<HTMLInputElement>("#room-id-input");
+    const returnButton = document.querySelector<HTMLButtonElement>(
+      "#return-to-launcher-button",
+    );
+    if (!input || !returnButton) {
+      throw new Error("launcher controls missing in quick play status test");
+    }
+
+    input.value = "room-9";
+    document.querySelector<HTMLButtonElement>("#join-room-button")?.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    returnButton.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    document.querySelector<HTMLButtonElement>("#quick-play-button")?.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(document.querySelector("#home-status")?.textContent).toBe(
+      "Launching game...",
+    );
+  });
+
+  it("keeps upload success status low-density", async () => {
+    vi.mocked(uploadImage).mockResolvedValue({
+      imageId: "img-uploaded",
+      imageUrl: "https://private.test/uploaded",
+      retention: "session",
+      bytes: 128,
+    });
+
+    mountLauncher();
+    const uploadInput = document.querySelector<HTMLInputElement>("#upload-input");
+    if (!uploadInput) {
+      throw new Error("upload input missing in upload status test");
+    }
+
+    Object.defineProperty(uploadInput, "files", {
+      configurable: true,
+      value: [new File([new Uint8Array([1, 2, 3])], "signal.png", { type: "image/png" })],
+    });
+
+    uploadInput.dispatchEvent(new Event("change"));
+    await vi.waitFor(() => {
+      expect(document.querySelector("#home-status")?.textContent).toBe(
+        "Upload ready.",
+      );
+    });
   });
 
   it("marks the launcher as reduced motion while keeping controls visible", () => {

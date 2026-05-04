@@ -68,8 +68,11 @@ describe("createWelcomeScreenHtml", () => {
       "image/png,image/jpeg,image/webp",
     );
     expect(preview?.style.display).toBe("none");
+    expect(
+      document.querySelector('[data-launcher-upload-label="title"]')?.textContent,
+    ).toBe("Veiled image");
     expect(document.querySelector("#upload-filename")?.textContent).toBe(
-      "Using default hidden image.",
+      "Default concealed image in use.",
     );
   });
 

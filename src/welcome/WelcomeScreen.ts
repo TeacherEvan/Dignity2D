@@ -35,8 +35,8 @@ export function createWelcomeScreenHtml(): string {
             <section aria-label="Image upload" data-launcher-section="upload">
               <div data-launcher-upload-head="row">
                 <div>
-                  <p data-launcher-upload-label="title">Uploaded image preview</p>
-                  <p id="upload-filename">Using default hidden image.</p>
+                  <p data-launcher-upload-label="title">Veiled image</p>
+                  <p id="upload-filename">Default concealed image in use.</p>
                 </div>
                 <button id="upload-trigger-button" type="button">Upload Image</button>
               </div>

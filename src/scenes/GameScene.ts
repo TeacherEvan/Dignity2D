@@ -380,6 +380,10 @@ export function makeHudSnapshot(
   };
 }
 
+export function makePreviewLabel(imageUrl?: string): string {
+  return imageUrl ? "Chosen image" : "Concealed image";
+}
+
 export function makeGameStatusText(
   launchData: GameLaunchData,
   won: boolean,
@@ -391,18 +395,24 @@ export function makeGameStatusText(
   }
   if (launchData.roomId) {
     const playerCount = launchData.roomPlayerIds?.length;
-    const roomLabel =
-      playerCount && playerCount > 1
-        ? `Room ${launchData.roomId} · ${playerCount} players`
-        : `Room ${launchData.roomId}`;
-    return launchData.stateVersion !== undefined
-      ? `${roomLabel} · Sync ${launchData.stateVersion}`
-      : roomLabel;
+    if (playerCount && playerCount > 1) {
+      return `Room ${launchData.roomId} · ${playerCount} players linked`;
+    }
+
+    return `Room ${launchData.roomId} · Awaiting second player`;
   }
+  if (launchData.imageId && territoryLabel === "Border Camp") {
+    return "Signal concealed";
+  }
+  if (territoryLabel) {
+    return territoryLabel;
+  }
+
   if (launchData.imageId) {
-    return `Image ${launchData.imageId}`;
+    return "Signal concealed";
   }
-  return territoryLabel ?? `Enemies ${enemyCount}`;
+
+  return `Enemies ${enemyCount}`;
 }
 
 export class GameScene extends Phaser.Scene {
@@ -496,7 +506,7 @@ export class GameScene extends Phaser.Scene {
       .text(
         this.boardOrigin.x + boardSize.width / 2,
         Math.max(24, layoutMetrics.previewY - 44),
-        this.launchData.imageUrl ? "Uploaded preview" : "Default hidden image",
+        makePreviewLabel(this.launchData.imageUrl),
         {
           color: PALETTE.css.SAND,
           fontSize: "14px",

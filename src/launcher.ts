@@ -40,9 +40,6 @@ function formatRoomFailureStatus(error: unknown, action: "join" | "create"): str
     if (error.message.includes("VITE_SERVER_URL")) {
       return "Online rooms need the backend.";
     }
-    if (action === "join" && error.message.toLowerCase().includes("full")) {
-      return "Join failed. Room is full.";
-    }
   }
 
   return action === "join"
@@ -130,6 +127,9 @@ export function mountLauncher(options: LauncherMountOptions = {}): void {
   const uploadInput = document.querySelector<HTMLInputElement>("#upload-input");
   const uploadPreview =
     document.querySelector<HTMLImageElement>("#upload-preview");
+  const uploadPreviewTitle = document.querySelector<HTMLElement>(
+    '[data-launcher-upload-label="title"]',
+  );
   const uploadFilename =
     document.querySelector<HTMLParagraphElement>("#upload-filename");
   const returnButton = document.querySelector<HTMLButtonElement>(
@@ -217,25 +217,46 @@ export function mountLauncher(options: LauncherMountOptions = {}): void {
     if (!uploadPreview || !uploadFilename) return;
     uploadPreview.src = url;
     uploadPreview.style.display = "block";
+    if (uploadPreviewTitle) {
+      uploadPreviewTitle.textContent = "Chosen image";
+    }
     uploadFilename.textContent = fileName;
     if (shell) {
       shell.dataset.uploadState = "ready";
     }
   };
 
+  const clearPreview = (): void => {
+    state.selectedImageUrl = undefined;
+    state.selectedFileName = undefined;
+    if (uploadPreview) {
+      uploadPreview.removeAttribute("src");
+      uploadPreview.style.display = "none";
+    }
+    if (uploadPreviewTitle) {
+      uploadPreviewTitle.textContent = "Veiled image";
+    }
+    if (uploadFilename) {
+      uploadFilename.textContent = "Default concealed image in use.";
+    }
+    if (shell) {
+      shell.dataset.uploadState = "empty";
+    }
+  };
+
   const startGame = async (data: GameLaunchData): Promise<void> => {
     setStatus(
-      state.roomId ? `Launching ${state.roomId}...` : "Launching game...",
+      data.roomId ? `Launching ${data.roomId}...` : "Launching game...",
       "cool",
     );
     const { startGameSession } = await import("./bootstrap");
     await startGameSession({
+      ...data,
       imageId: state.selectedImageId,
-      imageUrl: state.selectedImageUrl,
+      imageUrl: data.roomId ? undefined : state.selectedImageUrl,
       layoutId: resolvedLayoutId,
       motionMode,
       diagnostics: eventTracker,
-      ...data,
     });
     if (shell) {
       shell.style.display = "none";
@@ -397,6 +418,8 @@ export function mountLauncher(options: LauncherMountOptions = {}): void {
             session.imageUrl,
             state.selectedFileName ?? session.imageId,
           );
+        } else {
+          clearPreview();
         }
         if (roomInput) {
           roomInput.value = session.roomId;
@@ -449,10 +472,7 @@ export function mountLauncher(options: LauncherMountOptions = {}): void {
         state.roomId = session.roomId;
         state.playerId = session.playerId;
         state.selectedImageId = session.imageId;
-        if (session.imageUrl) {
-          state.selectedImageUrl = session.imageUrl;
-          showPreview(session.imageUrl, session.imageId);
-        }
+        clearPreview();
         updateRoomLabel(`Joined room: ${session.roomId}`);
         setStatus(`Joined ${session.roomId}.`);
         emitDiagnostic("room_joined", { mode: "multiplayer" });
@@ -504,10 +524,7 @@ export function mountLauncher(options: LauncherMountOptions = {}): void {
         state.selectedImageUrl = uploaded.imageUrl;
         state.selectedFileName = file.name;
         showPreview(state.selectedImageUrl, file.name);
-        setStatus(
-          `Upload ready (${uploaded.bytes} bytes, ${uploaded.retention}).`,
-          "cool",
-        );
+        setStatus("Upload ready.", "cool");
       } catch (error) {
         setStatus(
           error instanceof Error ? error.message : "Upload failed.",
