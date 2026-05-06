@@ -41,18 +41,23 @@ function isLocalHostname(hostname: string): boolean {
 }
 
 export function resolveDefaultServerUrl(
-  configuredServerUrl = import.meta.env.VITE_SERVER_URL,
+  configuredServerUrl?: string | null,
   locationLike: LocationLike | null = typeof window === "undefined"
     ? null
     : window.location,
 ): string | null {
+  const resolvedConfiguredServerUrl =
+    arguments.length > 0 ? configuredServerUrl : import.meta.env.VITE_SERVER_URL;
   const localFallback =
     locationLike && isLocalHostname(locationLike.hostname)
       ? "http://127.0.0.1:8787"
       : null;
 
-  if (configuredServerUrl && configuredServerUrl !== PLACEHOLDER_SERVER_URL) {
-    return configuredServerUrl;
+  if (
+    resolvedConfiguredServerUrl &&
+    resolvedConfiguredServerUrl !== PLACEHOLDER_SERVER_URL
+  ) {
+    return resolvedConfiguredServerUrl;
   }
 
   if (localFallback) {

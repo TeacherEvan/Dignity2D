@@ -410,16 +410,20 @@ export function makeHudSnapshot(
 ): HudSnapshot {
   const player = state.players[0];
   const territoryStage = getTerritoryStage(state.revealedRatio);
+  const statusText =
+    player?.mode === "drawing" && player.activeTrail
+      ? "Trail exposed"
+      : makeGameStatusText(
+          launchData,
+          state.won,
+          state.enemies.length,
+          territoryStage.label,
+        );
 
   return {
     score: player?.score ?? 0,
     revealedRatio: state.revealedRatio,
-    statusText: makeGameStatusText(
-      launchData,
-      state.won,
-      state.enemies.length,
-      territoryStage.label,
-    ),
+    statusText,
     captureCount: state.captures.length,
     won: state.won,
   };
@@ -432,6 +436,8 @@ export function makeHudDisplayModel(snapshot: HudSnapshot): HudDisplayModel {
     statusColor = PALETTE.css.GOLD;
   } else if (snapshot.statusText === "Signal concealed") {
     statusColor = PALETTE.css.CYAN;
+  } else if (snapshot.statusText === "Trail exposed") {
+    statusColor = PALETTE.css.MAGENTA;
   } else if (snapshot.captureCount > 0 || snapshot.revealedRatio > 0) {
     statusColor = PALETTE.css.AMBER;
   }
