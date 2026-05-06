@@ -23,7 +23,7 @@ export function createWelcomeScreenHtml(): string {
           </div>
 
           <section data-launcher-band="operations" data-launcher-reveal="operations" aria-label="Room and image controls">
-            <section aria-label="Room controls" data-launcher-section="room">
+            <section aria-label="Room controls" data-launcher-section="room" data-launcher-instrument="room">
               <label for="room-id-input">Join an existing room</label>
               <div data-launcher-room-controls="row">
                 <input id="room-id-input" type="text" placeholder="room-1" />
@@ -32,7 +32,11 @@ export function createWelcomeScreenHtml(): string {
               <p id="current-room-label">No room created yet.</p>
             </section>
 
-            <section aria-label="Image upload" data-launcher-section="upload">
+            <div data-launcher-band-spine="operations" aria-hidden="true">
+              <span data-launcher-band-glyph="sigil"></span>
+            </div>
+
+            <section aria-label="Image upload" data-launcher-section="upload" data-launcher-instrument="upload">
               <div data-launcher-upload-head="row">
                 <div>
                   <p data-launcher-upload-label="title">Veiled image</p>

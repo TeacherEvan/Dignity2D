@@ -95,4 +95,13 @@ describe("createWelcomeScreenHtml", () => {
       document.querySelector('[data-launcher-status-region="home"]'),
     ).toBeTruthy();
   });
+
+  it("builds the lower operations band as two instruments around a central spine", () => {
+    document.body.innerHTML = createWelcomeScreenHtml();
+
+    expect(document.querySelector('[data-launcher-band="operations"]')).toBeTruthy();
+    expect(document.querySelector('[data-launcher-band-spine="operations"]')).toBeTruthy();
+    expect(document.querySelector('[data-launcher-instrument="room"]')).toBeTruthy();
+    expect(document.querySelector('[data-launcher-instrument="upload"]')).toBeTruthy();
+  });
 });

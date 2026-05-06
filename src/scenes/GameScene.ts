@@ -34,6 +34,8 @@ const PLAYER_SPEED = 160;
 const ENEMY_RADIUS = 12;
 const HUD_ENTER_DURATION = 260;
 const HUD_PULSE_DURATION = 160;
+const HUD_FRAME_HEIGHT = 62;
+const HUD_FRAME_CUT = 10;
 
 export type GameSceneFrameInput = {
   direction: Point;
@@ -53,6 +55,49 @@ export type SceneLayoutMetrics = {
   hudTop: number;
   previewY: number;
 };
+
+export type HudDisplayModel = {
+  revealText: string;
+  scoreText: string;
+  statusText: string;
+  captureText: string;
+  statusColor: string;
+};
+
+function makeChamferedRectPoints(
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  cut = HUD_FRAME_CUT,
+): Phaser.Math.Vector2[] {
+  return [
+    new Phaser.Math.Vector2(x + cut, y),
+    new Phaser.Math.Vector2(x + width, y),
+    new Phaser.Math.Vector2(x + width, y + height - cut),
+    new Phaser.Math.Vector2(x + width - cut, y + height),
+    new Phaser.Math.Vector2(x, y + height),
+    new Phaser.Math.Vector2(x, y + cut),
+  ];
+}
+
+function drawChamferedPanel(
+  graphics: Phaser.GameObjects.Graphics,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  fillColor: number,
+  fillAlpha: number,
+  strokeColor: number,
+  strokeAlpha: number,
+): void {
+  const points = makeChamferedRectPoints(x, y, width, height);
+  graphics.fillStyle(fillColor, fillAlpha);
+  graphics.fillPoints(points, true, true);
+  graphics.lineStyle(1.5, strokeColor, strokeAlpha);
+  graphics.strokePoints(points, true, true);
+}
 
 function resolveLayoutContext(layoutId?: string) {
   switch (layoutId) {
@@ -380,6 +425,26 @@ export function makeHudSnapshot(
   };
 }
 
+export function makeHudDisplayModel(snapshot: HudSnapshot): HudDisplayModel {
+  let statusColor = PALETTE.css.SAND;
+
+  if (snapshot.won) {
+    statusColor = PALETTE.css.GOLD;
+  } else if (snapshot.statusText === "Signal concealed") {
+    statusColor = PALETTE.css.CYAN;
+  } else if (snapshot.captureCount > 0 || snapshot.revealedRatio > 0) {
+    statusColor = PALETTE.css.AMBER;
+  }
+
+  return {
+    revealText: calculateRevealPercentText(snapshot.revealedRatio),
+    scoreText: `Score ${snapshot.score}`,
+    statusText: snapshot.statusText,
+    captureText: String(snapshot.captureCount).padStart(2, "0"),
+    statusColor,
+  };
+}
+
 export function makePreviewLabel(imageUrl?: string): string {
   return imageUrl ? "Chosen image" : "Concealed image";
 }
@@ -423,9 +488,13 @@ export class GameScene extends Phaser.Scene {
   private inputSequence = 0;
   private activePlayerId = PLAYER_ID;
   private boardOrigin = { x: 0, y: 0 };
+  private hudChrome?: Phaser.GameObjects.Graphics;
+  private hudSignal?: Phaser.GameObjects.Graphics;
   private revealText?: Phaser.GameObjects.Text;
   private scoreText?: Phaser.GameObjects.Text;
   private statusText?: Phaser.GameObjects.Text;
+  private captureCountText?: Phaser.GameObjects.Text;
+  private captureLabelText?: Phaser.GameObjects.Text;
   private captureGraphics?: Phaser.GameObjects.Graphics;
   private trailGraphics?: Phaser.GameObjects.Graphics;
   private playerMarker?: Phaser.GameObjects.Arc;
@@ -524,23 +593,44 @@ export class GameScene extends Phaser.Scene {
       this.add.circle(0, 0, 10, PALETTE.AMBER),
     );
 
-    this.revealText = this.add.text(24, 24, calculateRevealPercentText(0), {
+    this.hudChrome = this.add.graphics();
+    this.hudSignal = this.add.graphics();
+    this.drawHudChrome(layoutMetrics);
+
+    this.revealText = this.add.text(34, layoutMetrics.hudTop + 14, "00% Revealed", {
       color: PALETTE.css.CYAN,
-      fontSize: "18px",
+      fontFamily: '"Palatino Linotype", Georgia, serif',
+      fontSize: "20px",
     });
-    this.scoreText = this.add.text(24, layoutMetrics.hudTop + 28, "Score 0", {
+    this.scoreText = this.add.text(214, layoutMetrics.hudTop + 16, "Score 0", {
       color: PALETTE.css.GOLD,
-      fontSize: "18px",
-    });
+      fontFamily: '"Trebuchet MS", sans-serif',
+      fontSize: "16px",
+    }).setOrigin(1, 0);
     this.statusText = this.add.text(
-      24,
-      layoutMetrics.hudTop + 56,
+      34,
+      layoutMetrics.hudTop + 40,
       `Mask ${maskSize.width}x${maskSize.height}`,
       {
         color: PALETTE.css.SAND,
-        fontSize: "16px",
+        fontFamily: '"Trebuchet MS", sans-serif',
+        fontSize: "14px",
       },
     );
+    this.captureCountText = this.add
+      .text(this.scale.width - 48, layoutMetrics.hudTop + 12, "00", {
+        color: PALETTE.css.GOLD,
+        fontFamily: '"Palatino Linotype", Georgia, serif',
+        fontSize: "22px",
+      })
+      .setOrigin(0.5, 0);
+    this.captureLabelText = this.add
+      .text(this.scale.width - 48, layoutMetrics.hudTop + 36, "Captures", {
+        color: PALETTE.css.SAND,
+        fontFamily: '"Trebuchet MS", sans-serif',
+        fontSize: "11px",
+      })
+      .setOrigin(0.5, 0);
 
     if (!this.prefersReducedMotion) {
       this.playHudEntrance();
@@ -710,12 +800,12 @@ export class GameScene extends Phaser.Scene {
     });
 
     const nextHudSnapshot = makeHudSnapshot(this.state, this.launchData);
+    const hudDisplay = makeHudDisplayModel(nextHudSnapshot);
 
-    this.revealText?.setText(
-      calculateRevealPercentText(nextHudSnapshot.revealedRatio),
-    );
-    this.scoreText?.setText(`Score ${nextHudSnapshot.score}`);
-    this.statusText?.setText(nextHudSnapshot.statusText);
+    this.revealText?.setText(hudDisplay.revealText);
+    this.scoreText?.setText(hudDisplay.scoreText);
+    this.statusText?.setText(hudDisplay.statusText).setColor(hudDisplay.statusColor);
+    this.captureCountText?.setText(hudDisplay.captureText);
 
     if (!this.prefersReducedMotion) {
       this.playHudFeedback(deriveHudFeedback(this.hudSnapshot, nextHudSnapshot));
@@ -725,9 +815,13 @@ export class GameScene extends Phaser.Scene {
   }
 
   private playHudEntrance(): void {
-    const hudTexts = [this.revealText, this.scoreText, this.statusText].filter(
-      (text): text is Phaser.GameObjects.Text => Boolean(text),
-    );
+    const hudTexts = [
+      this.revealText,
+      this.scoreText,
+      this.statusText,
+      this.captureCountText,
+      this.captureLabelText,
+    ].filter((text): text is Phaser.GameObjects.Text => Boolean(text));
 
     hudTexts.forEach((text, index) => {
       const baseY = text.y;
@@ -754,6 +848,62 @@ export class GameScene extends Phaser.Scene {
     if (feedback.pulseStatus || feedback.captureCue) {
       this.pulseHudText(this.statusText, 1.04, true);
     }
+    if (feedback.captureCue) {
+      this.pulseHudText(this.captureCountText, 1.08);
+    }
+  }
+
+  private drawHudChrome(layoutMetrics: SceneLayoutMetrics): void {
+    const frameLeft = 20;
+    const frameTop = layoutMetrics.hudTop + 6;
+    const frameWidth = Math.min(210, this.scale.width - 116);
+    const sealSize = 64;
+    const sealLeft = this.scale.width - sealSize - 18;
+
+    this.hudChrome?.clear();
+    this.hudSignal?.clear();
+
+    if (!this.hudChrome || !this.hudSignal) {
+      return;
+    }
+
+    drawChamferedPanel(
+      this.hudChrome,
+      frameLeft,
+      frameTop,
+      frameWidth,
+      HUD_FRAME_HEIGHT,
+      PALETTE.BORDER,
+      0.9,
+      PALETTE.SAND,
+      0.65,
+    );
+    drawChamferedPanel(
+      this.hudChrome,
+      sealLeft,
+      frameTop,
+      sealSize,
+      HUD_FRAME_HEIGHT,
+      PALETTE.BORDER,
+      0.92,
+      PALETTE.GOLD,
+      0.7,
+    );
+
+    this.hudSignal.lineStyle(1, PALETTE.CYAN, 0.45);
+    this.hudSignal.lineBetween(
+      frameLeft + 14,
+      frameTop + 26,
+      frameLeft + frameWidth - 18,
+      frameTop + 26,
+    );
+    this.hudSignal.lineStyle(1, PALETTE.AMBER, 0.32);
+    this.hudSignal.lineBetween(
+      sealLeft + sealSize / 2,
+      frameTop + 10,
+      sealLeft + sealSize / 2,
+      frameTop + HUD_FRAME_HEIGHT - 10,
+    );
   }
 
   private pulseHudText(

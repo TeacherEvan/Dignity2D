@@ -9,30 +9,23 @@ import {
   saveLayoutPreference,
   type Handedness,
 } from "./display/LayoutPreferences";
-import {
-  createEventTracker,
-  type DiagnosticEvent,
-  type DiagnosticEventName,
-  type DiagnosticPayload,
-} from "./diagnostics/EventTracker";
+import { createEventTracker } from "./diagnostics/EventTracker";
 import type { GameLaunchData } from "./session";
 import { createWelcomeScreenHtml } from "./welcome/WelcomeScreen";
 
 type LauncherState = {
   roomId: string;
   playerId?: string;
+  roomPlayerIds?: string[];
+  stateVersion?: number;
   selectedImageId: string;
   selectedImageUrl?: string;
   selectedFileName?: string;
 };
 
-const LAUNCHER_IGNITION_MS = 820;
-
-type LauncherMountOptions = {
-  diagnostics?: {
-    sink?: (events: DiagnosticEvent[]) => void;
-    now?: () => number;
-  };
+type LauncherDiagnosticsOptions = {
+  sink?: (events: Array<{ name: string; at: number; payload: Record<string, string | number | boolean> }>) => void;
+  now?: () => number;
 };
 
 function formatRoomFailureStatus(error: unknown, action: "join" | "create"): string {
@@ -57,11 +50,23 @@ function resolveMotionMode(): "full" | "reduced" {
     : "full";
 }
 
-export function mountLauncher(options: LauncherMountOptions = {}): void {
-  const app = document.createElement("div");
-  app.id = "app-shell";
-  app.innerHTML = createWelcomeScreenHtml();
-  document.body.prepend(app);
+export function mountLauncher(options?: {
+  diagnostics?: LauncherDiagnosticsOptions;
+}): void {
+  let app = document.querySelector<HTMLDivElement>("#app-shell");
+  const hadPreRenderedShell = Boolean(app?.querySelector("#launcher-shell"));
+  if (!app) {
+    app = document.createElement("div");
+    app.id = "app-shell";
+    document.body.prepend(app);
+  }
+  if (!app.querySelector("#launcher-shell")) {
+    app.innerHTML = createWelcomeScreenHtml();
+  }
+
+  const diagnostics = options?.diagnostics
+    ? createEventTracker(options.diagnostics)
+    : null;
 
   const state: LauncherState = {
     roomId: "",
@@ -79,18 +84,6 @@ export function mountLauncher(options: LauncherMountOptions = {}): void {
       joystickScale: 1,
       handedness: "left" as Handedness,
     };
-  const eventTracker = createEventTracker({
-    sink: options.diagnostics?.sink,
-    now: options.diagnostics?.now,
-  });
-
-  const emitDiagnostic = (
-    name: DiagnosticEventName,
-    payload: DiagnosticPayload = {},
-  ): void => {
-    eventTracker.track(name, payload);
-    eventTracker.flush();
-  };
 
   const shell = document.querySelector<HTMLElement>("#launcher-shell");
   const motionMode = resolveMotionMode();
@@ -99,25 +92,9 @@ export function mountLauncher(options: LauncherMountOptions = {}): void {
     shell.dataset.deviceClass = displayProfile.deviceClass;
     shell.dataset.layoutId = resolvedLayoutId;
     shell.dataset.motionMode = motionMode;
-    shell.dataset.launchPhase = isReducedMotion ? "ready" : "igniting";
+    shell.dataset.launchPhase = hadPreRenderedShell ? "ready" : "igniting";
     shell.dataset.uploadState = "empty";
   }
-
-  if (shell && !isReducedMotion) {
-    window.setTimeout(() => {
-      if (shell.dataset.launchPhase === "igniting") {
-        shell.dataset.launchPhase = "ready";
-      }
-    }, LAUNCHER_IGNITION_MS);
-  }
-
-  emitDiagnostic("welcome_viewed");
-  emitDiagnostic("display_detected", {
-    deviceClass: displayProfile.deviceClass,
-    orientation: displayProfile.orientation,
-    compactHud: displayProfile.compactHud,
-  });
-  emitDiagnostic("layout_loaded", { layoutId: resolvedLayoutId });
 
   const status = document.querySelector<HTMLParagraphElement>("#home-status");
   const roomInput = document.querySelector<HTMLInputElement>("#room-id-input");
@@ -127,11 +104,11 @@ export function mountLauncher(options: LauncherMountOptions = {}): void {
   const uploadInput = document.querySelector<HTMLInputElement>("#upload-input");
   const uploadPreview =
     document.querySelector<HTMLImageElement>("#upload-preview");
-  const uploadPreviewTitle = document.querySelector<HTMLElement>(
-    '[data-launcher-upload-label="title"]',
-  );
   const uploadFilename =
     document.querySelector<HTMLParagraphElement>("#upload-filename");
+  const uploadTitle = document.querySelector<HTMLParagraphElement>(
+    '[data-launcher-upload-label="title"]',
+  );
   const returnButton = document.querySelector<HTMLButtonElement>(
     "#return-to-launcher-button",
   );
@@ -176,6 +153,14 @@ export function mountLauncher(options: LauncherMountOptions = {}): void {
   let activeCueTimer = 0;
   let statusToneTimer = 0;
 
+  const trackLauncherEvent = (
+    name: "welcome_viewed" | "display_detected" | "layout_loaded" | "layout_saved" | "solo_started",
+    payload: Record<string, string | number | boolean> = {},
+  ): void => {
+    diagnostics?.track(name, payload);
+    diagnostics?.flush();
+  };
+
   const setActiveCue = (cue: string): void => {
     if (!shell || isReducedMotion) return;
 
@@ -213,50 +198,75 @@ export function mountLauncher(options: LauncherMountOptions = {}): void {
       (state.roomId ? `Current room: ${state.roomId}` : "No room created yet.");
   };
 
+  const clearPreview = (): void => {
+    if (!uploadPreview) return;
+    uploadPreview.removeAttribute("src");
+    uploadPreview.style.display = "none";
+  };
+
+  const setUploadPresentation = (
+    mode: "empty" | "veiled" | "chosen",
+    fileName?: string,
+    imageUrl?: string,
+  ): void => {
+    if (uploadTitle) {
+      uploadTitle.textContent =
+        mode === "chosen" ? "Chosen image" : "Veiled image";
+    }
+
+    if (uploadFilename) {
+      uploadFilename.textContent =
+        fileName ??
+        (mode === "chosen"
+          ? "Chosen image ready."
+          : "Default concealed image in use.");
+    }
+
+    if (shell) {
+      shell.dataset.uploadState = mode;
+    }
+
+    if (mode === "chosen" && imageUrl && uploadPreview) {
+      uploadPreview.src = imageUrl;
+      uploadPreview.style.display = "block";
+      return;
+    }
+
+    clearPreview();
+  };
+
+  const resetRoomSessionState = (): void => {
+    state.roomId = "";
+    state.playerId = undefined;
+    state.roomPlayerIds = undefined;
+    state.stateVersion = undefined;
+  };
+
   const showPreview = (url: string, fileName: string): void => {
     if (!uploadPreview || !uploadFilename) return;
     uploadPreview.src = url;
     uploadPreview.style.display = "block";
-    if (uploadPreviewTitle) {
-      uploadPreviewTitle.textContent = "Chosen image";
-    }
     uploadFilename.textContent = fileName;
-    if (shell) {
-      shell.dataset.uploadState = "ready";
-    }
-  };
-
-  const clearPreview = (): void => {
-    state.selectedImageUrl = undefined;
-    state.selectedFileName = undefined;
-    if (uploadPreview) {
-      uploadPreview.removeAttribute("src");
-      uploadPreview.style.display = "none";
-    }
-    if (uploadPreviewTitle) {
-      uploadPreviewTitle.textContent = "Veiled image";
-    }
-    if (uploadFilename) {
-      uploadFilename.textContent = "Default concealed image in use.";
+    if (uploadTitle) {
+      uploadTitle.textContent = "Chosen image";
     }
     if (shell) {
-      shell.dataset.uploadState = "empty";
+      shell.dataset.uploadState = "chosen";
     }
   };
 
   const startGame = async (data: GameLaunchData): Promise<void> => {
     setStatus(
-      data.roomId ? `Launching ${data.roomId}...` : "Launching game...",
+      state.roomId ? `Launching ${state.roomId}...` : "Launching game...",
       "cool",
     );
     const { startGameSession } = await import("./bootstrap");
     await startGameSession({
-      ...data,
       imageId: state.selectedImageId,
-      imageUrl: data.roomId ? undefined : state.selectedImageUrl,
+      imageUrl: state.selectedImageUrl,
       layoutId: resolvedLayoutId,
       motionMode,
-      diagnostics: eventTracker,
+      ...data,
     });
     if (shell) {
       shell.style.display = "none";
@@ -288,7 +298,7 @@ export function mountLauncher(options: LauncherMountOptions = {}): void {
       joystickScale: activeLayoutPreference.joystickScale,
       handedness: activeLayoutPreference.handedness,
     });
-    emitDiagnostic("layout_saved", { layoutId: layout.id });
+    trackLauncherEvent("layout_saved", { layoutId: layout.id });
     setStatus("Settings saved for this device.", "cool");
   };
 
@@ -298,15 +308,12 @@ export function mountLauncher(options: LauncherMountOptions = {}): void {
   ): void => {
     if (!panel) return;
     panel.hidden = !visible;
-    if (!shell) return;
-
-    if (visible) {
-      shell.dataset.openPanel = panel.id;
-      return;
-    }
-
-    if (shell.dataset.openPanel === panel.id) {
-      delete shell.dataset.openPanel;
+    if (shell) {
+      if (visible) {
+        shell.dataset.openPanel = panel.id;
+      } else if (shell.dataset.openPanel === panel.id) {
+        delete shell.dataset.openPanel;
+      }
     }
   };
 
@@ -330,6 +337,23 @@ export function mountLauncher(options: LauncherMountOptions = {}): void {
 
   syncSettingsControls();
   renderAccessibilityPanel();
+  setUploadPresentation("empty");
+
+  trackLauncherEvent("welcome_viewed");
+  trackLauncherEvent("display_detected", {
+    deviceClass: displayProfile.deviceClass,
+    orientation: displayProfile.orientation,
+    compactHud: displayProfile.compactHud,
+  });
+  trackLauncherEvent("layout_loaded", { layoutId: resolvedLayoutId });
+
+  if (!hadPreRenderedShell) {
+    window.setTimeout(() => {
+      if (shell?.dataset.launchPhase === "igniting") {
+        shell.dataset.launchPhase = "ready";
+      }
+    }, 820);
+  }
 
   returnButton?.addEventListener("click", async () => {
     const { stopGameSession } = await import("./bootstrap");
@@ -338,6 +362,7 @@ export function mountLauncher(options: LauncherMountOptions = {}): void {
       shell.style.display = "block";
     }
     returnButton.style.display = "none";
+    closePanels();
     setStatus("Ready", "cool");
   });
 
@@ -396,7 +421,8 @@ export function mountLauncher(options: LauncherMountOptions = {}): void {
   });
 
   quickPlayButton?.addEventListener("click", () => {
-      emitDiagnostic("solo_started", { mode: "solo" });
+      resetRoomSessionState();
+      trackLauncherEvent("solo_started", { mode: "solo" });
       void startGame({
         imageId: state.selectedImageId,
         imageUrl: state.selectedImageUrl,
@@ -411,29 +437,25 @@ export function mountLauncher(options: LauncherMountOptions = {}): void {
         const session = await createRoomSession(state.selectedImageId);
         state.roomId = session.roomId;
         state.playerId = session.playerId;
+        state.roomPlayerIds = session.playerIds;
+        state.stateVersion = session.stateVersion;
         state.selectedImageId = session.imageId;
         if (session.imageUrl) {
-          state.selectedImageUrl = session.imageUrl;
-          showPreview(
-            session.imageUrl,
-            state.selectedFileName ?? session.imageId,
-          );
+          setUploadPresentation("chosen", session.imageId, session.imageUrl);
         } else {
-          clearPreview();
+          setUploadPresentation("veiled");
         }
         if (roomInput) {
           roomInput.value = session.roomId;
         }
         updateRoomLabel(`Room ready: ${session.roomId}`);
         setStatus(`Room ${session.roomId} ready.`);
-        emitDiagnostic("room_created", { mode: "multiplayer" });
-        emitDiagnostic("multiplayer_started", { mode: "multiplayer" });
         await startGame({
           roomId: session.roomId,
           playerId: session.playerId,
           roomPlayerIds: session.playerIds,
           imageId: session.imageId,
-          imageUrl: state.selectedImageUrl,
+          imageUrl: undefined,
           stateVersion: session.stateVersion,
           layoutId: resolvedLayoutId,
         });
@@ -451,38 +473,39 @@ export function mountLauncher(options: LauncherMountOptions = {}): void {
 
       setStatus(`Joining ${roomId}...`);
       try {
-        if (state.roomId === roomId && state.playerId) {
-          const { reconnectRoom } = await import("./net/serverApi");
-          const snapshot = await reconnectRoom(roomId, state.playerId);
-          emitDiagnostic("multiplayer_started", { mode: "multiplayer" });
-          await startGame({
-            roomId,
-            playerId: state.playerId,
-            roomPlayerIds: snapshot.playerIds,
-            imageId: snapshot.imageId,
-            imageUrl: state.selectedImageUrl,
-            stateVersion: snapshot.stateVersion,
-            layoutId: resolvedLayoutId,
-          });
-          return;
-        }
-
-        const { joinRoomSession } = await import("./net/serverApi");
-        const session = await joinRoomSession(roomId);
+        const session =
+          state.roomId === roomId && state.playerId
+            ? await (await import("./net/serverApi")).reconnectRoom(
+                roomId,
+                state.playerId,
+              ).then((reconnected) => ({
+                roomId,
+                playerId: state.playerId!,
+                playerIds: reconnected.playerIds,
+                playerCount: reconnected.playerIds.length,
+                imageId: reconnected.imageId,
+                stateVersion: reconnected.stateVersion,
+                imageUrl: null,
+                bytes: null,
+                retention: null,
+              }))
+            : await (await import("./net/serverApi")).joinRoomSession(roomId);
         state.roomId = session.roomId;
         state.playerId = session.playerId;
+        state.roomPlayerIds = session.playerIds;
+        state.stateVersion = session.stateVersion;
         state.selectedImageId = session.imageId;
-        clearPreview();
+        state.selectedImageUrl = undefined;
+        state.selectedFileName = undefined;
+        setUploadPresentation("veiled");
         updateRoomLabel(`Joined room: ${session.roomId}`);
         setStatus(`Joined ${session.roomId}.`);
-        emitDiagnostic("room_joined", { mode: "multiplayer" });
-        emitDiagnostic("multiplayer_started", { mode: "multiplayer" });
         await startGame({
           roomId: session.roomId,
           playerId: session.playerId,
           roomPlayerIds: session.playerIds,
           imageId: state.selectedImageId,
-          imageUrl: state.selectedImageUrl,
+          imageUrl: undefined,
           stateVersion: session.stateVersion,
           layoutId: resolvedLayoutId,
         });

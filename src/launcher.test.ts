@@ -20,6 +20,7 @@ import {
   reconnectRoom,
   uploadImage,
 } from "./net/serverApi";
+import { createWelcomeScreenHtml } from "./welcome/WelcomeScreen";
 
 describe("launcher layout integration", () => {
   beforeEach(() => {
@@ -60,6 +61,28 @@ describe("launcher layout integration", () => {
     expect(shell?.dataset.layoutId).toBe("desktop-standard");
     expect(shell?.dataset.launchPhase).toBe("igniting");
     expect(shell?.dataset.uploadState).toBe("empty");
+  });
+
+  it("hydrates a prerendered launcher shell instead of duplicating it", () => {
+    document.body.innerHTML = `<div id="app-shell">${createWelcomeScreenHtml()}</div>`;
+
+    mountLauncher();
+
+    expect(document.querySelectorAll("#app-shell")).toHaveLength(1);
+    expect(document.querySelectorAll("#launcher-shell")).toHaveLength(1);
+    expect(document.querySelector<HTMLElement>("#launcher-shell")?.dataset.layoutId).toBe(
+      "desktop-standard",
+    );
+  });
+
+  it("keeps a prerendered launcher ready during hydration", () => {
+    document.body.innerHTML = `<div id="app-shell">${createWelcomeScreenHtml()}</div>`;
+
+    mountLauncher();
+
+    expect(document.querySelector<HTMLElement>("#launcher-shell")?.dataset.launchPhase).toBe(
+      "ready",
+    );
   });
 
   it("settles the launcher ignition phase after mount", async () => {

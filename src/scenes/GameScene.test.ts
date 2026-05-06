@@ -14,6 +14,7 @@ import {
   createSceneGameState,
   createSceneGameStateForLaunch,
   getScenePerformanceFallbackReason,
+  makeHudDisplayModel,
   makeHudSnapshot,
   makeGameStatusText,
   makePreviewLabel,
@@ -412,6 +413,81 @@ describe("GameScene helpers", () => {
       statusText: "Signal concealed",
       captureCount: 0,
       won: false,
+    });
+  });
+
+  it("surfaces an exposed-trail status while the player is drawing outside safe ground", () => {
+    const state = createSceneGameState();
+    state.players[0] = {
+      ...state.players[0],
+      mode: "drawing",
+      position: { x: 48, y: 48 },
+      activeTrail: {
+        playerId: "p1",
+        startedAt: 12,
+        points: [
+          { x: 0, y: 0 },
+          { x: 48, y: 48 },
+        ],
+      },
+    };
+
+    expect(makeHudSnapshot(state, { imageId: "default-image" })).toEqual({
+      score: 0,
+      revealedRatio: 0,
+      statusText: "Trail exposed",
+      captureCount: 0,
+      won: false,
+    });
+  });
+
+  it("maps concealed and active territory HUD states into ceremonial display copy", () => {
+    expect(
+      makeHudDisplayModel({
+        score: 0,
+        revealedRatio: 0,
+        statusText: "Signal concealed",
+        captureCount: 0,
+        won: false,
+      }),
+    ).toEqual({
+      revealText: "Reveal 0%",
+      scoreText: "Score 0",
+      statusText: "Signal concealed",
+      captureText: "00",
+      statusColor: "#00FFFF",
+    });
+
+    expect(
+      makeHudDisplayModel({
+        score: 240,
+        revealedRatio: 0.28,
+        statusText: "Safe Quarter",
+        captureCount: 2,
+        won: false,
+      }),
+    ).toEqual({
+      revealText: "Reveal 28%",
+      scoreText: "Score 240",
+      statusText: "Safe Quarter",
+      captureText: "02",
+      statusColor: "#FF8C00",
+    });
+
+    expect(
+      makeHudDisplayModel({
+        score: 80,
+        revealedRatio: 0.06,
+        statusText: "Trail exposed",
+        captureCount: 0,
+        won: false,
+      }),
+    ).toEqual({
+      revealText: "Reveal 6%",
+      scoreText: "Score 80",
+      statusText: "Trail exposed",
+      captureText: "00",
+      statusColor: "#FF00CC",
     });
   });
 });
