@@ -35,7 +35,9 @@ export class RoomClient {
       return;
     }
 
-    this.socket = new this.WebSocketImpl(toWebSocketUrl(this.options.serverUrl));
+    this.socket = new this.WebSocketImpl(
+      toWebSocketUrl(this.options.serverUrl),
+    );
     this.socket.addEventListener("open", this.handleOpen);
     this.socket.addEventListener("message", this.handleMessage);
     this.socket.addEventListener("error", this.handleError);
@@ -86,7 +88,9 @@ export class RoomClient {
 
   private readonly handleMessage = (event?: unknown): void => {
     try {
-      const rawPayload = JSON.parse(String((event as { data?: unknown } | undefined)?.data));
+      const rawPayload = JSON.parse(
+        String((event as { data?: unknown } | undefined)?.data),
+      );
       if (!isServerMessage(rawPayload)) {
         this.options.onError?.(new Error("Malformed server message."));
         return;
@@ -103,8 +107,12 @@ export class RoomClient {
   };
 
   private send(message: ClientMessage): void {
+    // Drop frames while the socket is still connecting or already closed.
+    // GameScene calls send every frame; throwing here would crash the update loop
+    // on every networked game start because the socket is not OPEN between
+    // connect() and the async 'open' event. Input frames are resent next tick.
     if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
-      throw new Error("Room socket is not open.");
+      return;
     }
 
     this.socket.send(JSON.stringify(message));

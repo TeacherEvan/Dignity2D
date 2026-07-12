@@ -47,7 +47,9 @@ export function resolveDefaultServerUrl(
     : window.location,
 ): string | null {
   const resolvedConfiguredServerUrl =
-    arguments.length > 0 ? configuredServerUrl : import.meta.env.VITE_SERVER_URL;
+    arguments.length > 0
+      ? configuredServerUrl
+      : import.meta.env.VITE_SERVER_URL;
   const localFallback =
     locationLike && isLocalHostname(locationLike.hostname)
       ? "http://127.0.0.1:8787"
@@ -185,41 +187,67 @@ export async function createRoom(
     throw new Error(await readErrorMessage(response, "Failed to create room."));
   }
 
-  return mapRoomResponse((await response.json()) as RawRoomResponse, activeServerUrl);
+  return mapRoomResponse(
+    (await response.json()) as RawRoomResponse,
+    activeServerUrl,
+  );
 }
 
 export function reconnectRoom(
   roomId: string,
   playerId: string,
   serverUrl = DEFAULT_SERVER_URL,
+  options: { timeoutMs?: number } = {},
 ): Promise<RoomSyncSnapshot> {
-  return new Promise((resolve, reject) => {
-    const activeServerUrl = requireServerUrl(serverUrl);
+  const activeServerUrl = requireServerUrl(serverUrl);
+  const timeoutMs = options.timeoutMs ?? 8000;
+  return new Promise<RoomSyncSnapshot>((resolve, reject) => {
+    let settled = false;
+    const finish = (action: () => void): void => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      action();
+    };
+
     const client = new RoomClient({
       roomId,
       playerId,
       serverUrl: activeServerUrl,
       onMessage: (payload) => {
         if (payload.type === "error") {
-          client.close();
-          reject(new Error(payload.message));
+          finish(() => {
+            client.close();
+            reject(new Error(payload.message));
+          });
           return;
         }
 
         if (payload.type === "state-sync") {
-          client.close();
-          resolve({
-            stateVersion: payload.stateVersion,
-            imageId: payload.imageId,
-            playerIds: payload.playerIds,
+          finish(() => {
+            client.close();
+            resolve({
+              stateVersion: payload.stateVersion,
+              imageId: payload.imageId,
+              playerIds: payload.playerIds,
+            });
           });
         }
       },
       onError: (error) => {
-        client.close();
-        reject(error);
+        finish(() => {
+          client.close();
+          reject(error);
+        });
       },
     });
+
+    const timer = setTimeout(() => {
+      finish(() => {
+        client.close();
+        reject(new Error("Room connection timed out."));
+      });
+    }, timeoutMs);
 
     client.connect();
   });
@@ -230,11 +258,7 @@ export async function createRoomSession(
   serverUrl = DEFAULT_SERVER_URL,
 ): Promise<RoomSession> {
   const room = await createRoom(imageId, serverUrl);
-  const snapshot = await reconnectRoom(
-    room.roomId,
-    room.playerId,
-    serverUrl,
-  );
+  const snapshot = await reconnectRoom(room.roomId, room.playerId, serverUrl);
   return {
     ...room,
     imageId: snapshot.imageId,
@@ -259,7 +283,10 @@ export async function joinRoom(
     throw new Error(await readErrorMessage(response, "Failed to join room."));
   }
 
-  return mapRoomResponse((await response.json()) as RawRoomResponse, activeServerUrl);
+  return mapRoomResponse(
+    (await response.json()) as RawRoomResponse,
+    activeServerUrl,
+  );
 }
 
 export async function joinRoomSession(
@@ -298,7 +325,9 @@ export async function uploadImage(
   );
 
   if (!response.ok) {
-    throw new Error(await readErrorMessage(response, "Failed to upload image."));
+    throw new Error(
+      await readErrorMessage(response, "Failed to upload image."),
+    );
   }
 
   return mapUploadedImage(

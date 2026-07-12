@@ -124,7 +124,7 @@ The repo has strong logic coverage, but the runtime wiring remains deliberately 
 
 - `README.md` is the primary entry point for setup, scripts, and current product-facing scope.
 - `architecture.md` is the authoritative description of current runtime structure and module ownership.
-- `jobcard.md` is only a lightweight historical execution note.
+- `.github/superpower/plan/jobcard.md` is only a lightweight historical execution note.
 - `.github/superpower/brainstorm/...` and `.github/superpower/plan/...` are archival inputs that explain why the repo looks the way it does, not what still needs to be built next.
 
 This means the architecture is ready for continued feature wiring, but the repo should be described as a well-tested gameplay foundation rather than a fully integrated shipped game.

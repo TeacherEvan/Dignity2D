@@ -22,6 +22,7 @@ import { transformImage } from "./upload/transformImage";
 type JsonValue = Record<string, unknown>;
 
 const MAX_JSON_BYTES = 8 * 1024;
+const MAX_WS_MESSAGE_BYTES = 64 * 1024;
 
 const CORS_HEADERS = {
   "access-control-allow-origin": "*",
@@ -256,7 +257,30 @@ export function createAppServer(): AppServer {
 
   const webSocketServer = new WebSocketServer({ server: httpServer });
   webSocketServer.on("connection", (socket) => {
+    let receivedBytes = 0;
     socket.on("message", (message) => {
+      const frameBytes =
+        typeof message === "string"
+          ? Buffer.byteLength(message)
+          : Buffer.isBuffer(message)
+            ? message.length
+            : message instanceof ArrayBuffer
+              ? message.byteLength
+              : (message as Buffer[]).reduce(
+                  (total, chunk) => total + chunk.length,
+                  0,
+                );
+      receivedBytes += frameBytes;
+
+      if (receivedBytes > MAX_WS_MESSAGE_BYTES) {
+        sendSocketMessage(socket, {
+          type: "error",
+          message: "Message size limit exceeded.",
+        });
+        socket.close();
+        return;
+      }
+
       let parsed: unknown;
       try {
         parsed = JSON.parse(message.toString());

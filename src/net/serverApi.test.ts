@@ -37,7 +37,11 @@ class MockWebSocket {
 
   send(_data: string): void {}
 
-  close(): void {}
+  closed = false;
+  close(): void {
+    this.readyState = 3;
+    this.closed = true;
+  }
 
   emit(type: string, event?: unknown): void {
     if (type === "open") {
@@ -268,13 +272,54 @@ describe("serverApi", () => {
       json: async () => ({ error: "Room not found or full." }),
     });
 
-    await expect(joinRoom("room-missing", "http://example.test")).rejects.toThrow(
-      "Room not found or full.",
-    );
+    await expect(
+      joinRoom("room-missing", "http://example.test"),
+    ).rejects.toThrow("Room not found or full.");
   });
 
   it("converts http URLs to websocket URLs", () => {
     expect(toWebSocketUrl("http://127.0.0.1:8787")).toBe("ws://127.0.0.1:8787");
     expect(toWebSocketUrl("https://example.test")).toBe("wss://example.test");
+  });
+
+  it("rejects when the websocket connection errors before sync", async () => {
+    const pending = reconnectRoom("room-1", "p1", "http://example.test", {
+      timeoutMs: 1000,
+    });
+    const socket = MockWebSocket.instances[0]!;
+    socket.emit("open");
+    socket.emit("error");
+
+    await expect(pending).rejects.toThrow("Room websocket connection failed.");
+  });
+
+  it("rejects with a timeout when no sync message arrives", async () => {
+    const pending = reconnectRoom("room-1", "p1", "http://example.test", {
+      timeoutMs: 50,
+    });
+
+    await expect(pending).rejects.toThrow("Room connection timed out.");
+    // Socket must be torn down so it cannot leak into later tests.
+    expect(MockWebSocket.instances[0]!.closed).toBe(true);
+  });
+
+  it("does not settle twice after the first terminal event", async () => {
+    const pending = reconnectRoom("room-1", "p1", "http://example.test", {
+      timeoutMs: 1000,
+    });
+    const socket = MockWebSocket.instances[0]!;
+    socket.emit("open");
+    socket.emit("error");
+    socket.emit("message", {
+      data: JSON.stringify({
+        type: "state-sync",
+        roomId: "room-1",
+        stateVersion: 3,
+        imageId: "img-1",
+        playerIds: ["p1", "p2"],
+      }),
+    });
+
+    await expect(pending).rejects.toThrow("Room websocket connection failed.");
   });
 });

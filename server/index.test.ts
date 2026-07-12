@@ -68,7 +68,9 @@ describe("server entrypoint", () => {
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
     );
     expect(uploaded.imagePath).toContain(`/images/${uploaded.imageId}`);
-    expect(new URL(uploaded.imagePath, app.getUrl()).searchParams.get("token")).toBeTruthy();
+    expect(
+      new URL(uploaded.imagePath, app.getUrl()).searchParams.get("token"),
+    ).toBeTruthy();
     expect(uploaded.retention).toBe("session");
     expect(uploaded.bytes).toBeGreaterThan(0);
     expect(Object.hasOwn(uploaded, "imageUrl")).toBe(false);
@@ -207,6 +209,46 @@ describe("server entrypoint", () => {
       },
     );
 
-    expect(received).toEqual({ type: "error", message: "Unsupported message." });
+    expect(received).toEqual({
+      type: "error",
+      message: "Unsupported message.",
+    });
+  });
+
+  it("closes the websocket when cumulative frame size exceeds the limit", async () => {
+    const app = createAppServer();
+    activeServers.push(app);
+    await app.listen();
+
+    const outcome = await new Promise<{
+      closed: boolean;
+      error?: { type: string; message?: string };
+    }>((resolve, reject) => {
+      const socket = new WebSocket(app.getUrl().replace("http", "ws"));
+      let error: { type: string; message?: string } | undefined;
+      socket.once("open", () => {
+        // Send many valid reconnect frames; each is small but cumulative bytes
+        // cross the 64 KiB cap, exercising the per-connection size guard.
+        for (let index = 0; index < 5000; index += 1) {
+          socket.send(
+            JSON.stringify({ type: "reconnect", roomId: "x", playerId: "p1" }),
+          );
+        }
+      });
+      socket.on("message", (message) => {
+        error = JSON.parse(message.toString()) as {
+          type: string;
+          message?: string;
+        };
+      });
+      socket.once("close", () => resolve({ closed: true, error }));
+      socket.once("error", reject);
+    });
+
+    expect(outcome.closed).toBe(true);
+    expect(outcome.error).toMatchObject({
+      type: "error",
+      message: "Message size limit exceeded.",
+    });
   });
 });
