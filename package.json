@@ -18,23 +18,23 @@
     "perf:mobile": "vitest run src/performance"
   },
   "dependencies": {
-    "@vitejs/plugin-basic-ssl": "latest",
+    "@vitejs/plugin-basic-ssl": "1.1.0",
     "phaser": "^3.80.1",
-    "sharp": "latest",
-    "ws": "latest"
+    "sharp": "0.34.5",
+    "ws": "8.20.0"
   },
   "devDependencies": {
-    "@playwright/test": "latest",
-    "@types/node": "latest",
-    "@types/ws": "latest",
-    "@typescript-eslint/eslint-plugin": "latest",
-    "@typescript-eslint/parser": "latest",
-    "eslint": "latest",
+    "@playwright/test": "1.59.1",
+    "@types/node": "25.6.0",
+    "@types/ws": "8.18.1",
+    "@typescript-eslint/eslint-plugin": "8.59.1",
+    "@typescript-eslint/parser": "8.59.1",
+    "eslint": "10.2.1",
     "jsdom": "^29.1.1",
-    "prettier": "latest",
+    "prettier": "3.8.3",
     "tsx": "^4.21.0",
-    "typescript": "latest",
+    "typescript": "6.0.3",
     "vite": "^5.4.20",
-    "vitest": "latest"
+    "vitest": "4.1.5"
   }
 }
