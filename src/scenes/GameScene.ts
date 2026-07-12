@@ -567,8 +567,16 @@ export class GameScene extends Phaser.Scene {
   private prefersReducedMotion = false;
   private performanceFallbackLogged = false;
 
-  private background?: Phaser.GameObjects.RenderTexture;
+  private background?: Phaser.GameObjects.Graphics;
+  private bgGlow?: Phaser.GameObjects.Graphics;
+  private bgGrid?: Phaser.GameObjects.Graphics;
+  private bgScan?: Phaser.GameObjects.Graphics;
+  private bgVignette?: Phaser.GameObjects.Graphics;
   private sweep?: Phaser.GameObjects.Graphics;
+  private captureGlow?: Phaser.GameObjects.Graphics;
+  private trailGlow?: Phaser.GameObjects.Graphics;
+  private playerPulse?: Phaser.GameObjects.Arc;
+  private enemyPulseMarkers: Phaser.GameObjects.Arc[] = [];
   private enemyGlowMarkers: Phaser.GameObjects.Arc[] = [];
   private enemyGlyphTexts: Phaser.GameObjects.Text[] = [];
   private projectileMarkers: Phaser.GameObjects.Arc[] = [];
@@ -663,7 +671,10 @@ export class GameScene extends Phaser.Scene {
 
     this.captureGraphics = this.add.graphics();
     this.trailGraphics = this.add.graphics();
+    this.trailGlow = this.add.graphics().setDepth(-1);
+    this.captureGlow = this.add.graphics().setDepth(0);
     this.playerGlow = this.add.circle(0, 0, 18, PALETTE.CYAN, 0.18);
+    this.playerPulse = this.add.circle(0, 0, 14, PALETTE.CYAN, 0).setStrokeStyle(2, PALETTE.CYAN, 0.5);
     this.playerMarker = this.add.circle(0, 0, 8, PALETTE.CYAN);
     this.playerMarker.setStrokeStyle(2, PALETTE.WHITE, 0.9);
     this.teammateMarkers = this.state.players
@@ -674,6 +685,9 @@ export class GameScene extends Phaser.Scene {
     );
     this.enemyGlowMarkers = this.state.enemies.map(() =>
       this.add.circle(0, 0, 22, PALETTE.AMBER, 0.16),
+    );
+    this.enemyPulseMarkers = this.state.enemies.map(() =>
+      this.add.circle(0, 0, 16, PALETTE.AMBER, 0).setStrokeStyle(2, PALETTE.AMBER, 0.4),
     );
     this.enemyGlyphTexts = this.state.enemies.map(() =>
       this.add
@@ -899,6 +913,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.captureGraphics.clear();
+    this.captureGlow?.clear();
     const shimmer = this.prefersReducedMotion
       ? 0.7
       : 0.5 + 0.25 * Math.sin(this.time.now / 280);
@@ -914,9 +929,19 @@ export class GameScene extends Phaser.Scene {
       this.captureGraphics.closePath();
       this.captureGraphics.fillPath();
       this.captureGraphics.strokePath();
+
+      // Animated neon border drawn on a separate additive-feel layer.
+      const pulse = this.prefersReducedMotion
+        ? 0.6
+        : 0.55 + 0.35 * Math.sin(this.time.now / 360);
+      this.captureGlow?.lineStyle(3, PALETTE.CYAN, pulse);
+      this.captureGlow?.strokePoints(points, true, true);
+      this.captureGlow?.fillStyle(PALETTE.CYAN, 0.06);
+      this.captureGlow?.fillPoints(points, true, true);
     }
 
     this.trailGraphics.clear();
+    this.trailGlow?.clear();
     if (!this.prefersReducedMotion) {
       this.trailGraphics.lineStyle(9, PALETTE.GOLD, 0.18);
       const glowTrail = player.activeTrail?.points ?? [];
@@ -934,6 +959,17 @@ export class GameScene extends Phaser.Scene {
     this.trailGraphics.lineStyle(3, PALETTE.GOLD, 0.95);
     const trail = player.activeTrail?.points ?? [];
     if (trail.length > 1) {
+      // Neon outer glow under the crisp line.
+      this.trailGlow?.lineStyle(7, PALETTE.GOLD, 0.3);
+      this.trailGlow?.beginPath();
+      const g0 = this.toScreen(trail[0]!);
+      this.trailGlow?.moveTo(g0.x, g0.y);
+      for (let index = 1; index < trail.length; index += 1) {
+        const point = this.toScreen(trail[index]!);
+        this.trailGlow?.lineTo(point.x, point.y);
+      }
+      this.trailGlow?.strokePath();
+
       this.trailGraphics.beginPath();
       const first = this.toScreen(trail[0]!);
       this.trailGraphics.moveTo(first.x, first.y);
@@ -945,6 +981,12 @@ export class GameScene extends Phaser.Scene {
       const tip = this.toScreen(trail[trail.length - 1]!);
       this.trailGraphics.fillStyle(PALETTE.WHITE, 0.9);
       this.trailGraphics.fillCircle(tip.x, tip.y, 4);
+      // Pulsing ring at the active tip so the close-point is obvious.
+      if (!this.prefersReducedMotion) {
+        const ring = 5 + 2 * (0.5 + 0.5 * Math.sin(this.time.now / 160));
+        this.trailGlow?.lineStyle(2, PALETTE.WHITE, 0.6);
+        this.trailGlow?.strokeCircle(tip.x, tip.y, ring);
+      }
     }
 
     const playerPosition = this.toScreen(player.position);
@@ -952,6 +994,12 @@ export class GameScene extends Phaser.Scene {
     this.playerGlow?.setPosition(playerPosition.x, playerPosition.y);
     const invuln = this.time.now < player.invulnUntil;
     this.playerMarker.setAlpha(invuln && !this.prefersReducedMotion ? 0.45 : 1);
+    this.playerPulse?.setPosition(playerPosition.x, playerPosition.y);
+    if (this.playerPulse && !this.prefersReducedMotion) {
+      const p = 0.5 + 0.5 * Math.sin(this.time.now / 240);
+      const radius = 14 + 4 * p;
+      this.playerPulse.setScale(radius / 14).setStrokeStyle(2, PALETTE.CYAN, 0.25 + 0.4 * p);
+    }
 
     while (this.teammateMarkers.length < this.state.players.length - 1) {
       this.teammateMarkers.push(this.add.circle(0, 0, 6, PALETTE.SAND));
@@ -977,6 +1025,9 @@ export class GameScene extends Phaser.Scene {
       this.enemyGlowMarkers.push(
         this.add.circle(0, 0, 22, PALETTE.AMBER, 0.16),
       );
+      this.enemyPulseMarkers.push(
+        this.add.circle(0, 0, 16, PALETTE.AMBER, 0).setStrokeStyle(2, PALETTE.AMBER, 0.4),
+      );
       this.enemyGlyphTexts.push(
         this.add
           .text(0, 0, "", {
@@ -990,12 +1041,18 @@ export class GameScene extends Phaser.Scene {
     this.state.enemies.forEach((enemy, index) => {
       const marker = this.enemyMarkers[index];
       const glow = this.enemyGlowMarkers[index];
+      const pulse = this.enemyPulseMarkers[index];
       const glyph = this.enemyGlyphTexts[index];
       if (!marker) return;
       const position = this.toScreen(enemy.position);
       const color = enemyColor(enemy.kind);
       marker.setPosition(position.x, position.y).setFillStyle(color, 1);
       glow?.setPosition(position.x, position.y).setFillStyle(color, 0.16);
+      if (pulse && !this.prefersReducedMotion) {
+        const p = 0.5 + 0.5 * Math.sin(this.time.now / 300 + index * 1.3);
+        pulse.setPosition(position.x, position.y).setStrokeStyle(2, color, 0.2 + 0.45 * p);
+        pulse.setScale((16 + 4 * p) / 16);
+      }
       glyph
         ?.setPosition(position.x, position.y)
         .setText(enemyGlyph(enemy.kind))
@@ -1054,15 +1111,48 @@ export class GameScene extends Phaser.Scene {
     boardSize: { width: number; height: number },
   ): void {
     const origin = this.boardOrigin;
-    const rt = this.add.renderTexture(
-      origin.x,
-      origin.y,
-      boardSize.width,
-      boardSize.height,
-    );
-    rt.setOrigin(0, 0).setDepth(-5);
+    const ox = origin.x;
+    const oy = origin.y;
 
-    const grid = this.add.graphics();
+    // Live layered atmosphere (Graphics objects, behind gameplay at depth -5..-3).
+    // Live objects composite reliably under WebGL readback, unlike baked RT frames.
+
+    // Base wash: vertical gradient from a desaturated gold tint down to the void.
+    const base = this.add.graphics().setPosition(ox, oy).setDepth(-5);
+    const bands = 28;
+    const top = Phaser.Display.Color.IntegerToColor(0x1d1226);
+    const bottom = Phaser.Display.Color.IntegerToColor(PALETTE.VOID);
+    for (let i = 0; i < bands; i++) {
+      const c = Phaser.Display.Color.Interpolate.ColorWithColor(top, bottom, bands - 1, i);
+      base.fillStyle(Phaser.Display.Color.GetColor(c.r, c.g, c.b), 1);
+      base.fillRect(0, (boardSize.height * i) / bands, boardSize.width, boardSize.height / bands + 1);
+    }
+
+    // Soft radial core glow near the upper-center for depth.
+    const glow = this.add.graphics().setPosition(ox, oy).setDepth(-4).setBlendMode(Phaser.BlendModes.ADD);
+    const cx = boardSize.width / 2;
+    const cy = boardSize.height * 0.38;
+    const maxR = Math.max(boardSize.width, boardSize.height) * 0.8;
+    const glowSteps = 24;
+    for (let i = glowSteps; i >= 1; i--) {
+      const r = (maxR * i) / glowSteps;
+      const a = 0.07 * (1 - i / glowSteps);
+      glow.fillStyle(PALETTE.GOLD, a);
+      glow.fillCircle(cx, cy, r);
+    }
+
+    // Faint dot grid for spatial reference.
+    const dots = this.add.graphics().setPosition(ox, oy).setDepth(-4);
+    dots.fillStyle(PALETTE.SAND, 0.16);
+    const dotStep = 26;
+    for (let x = dotStep / 2; x < boardSize.width; x += dotStep) {
+      for (let y = dotStep / 2; y < boardSize.height; y += dotStep) {
+        dots.fillCircle(x, y, 1.3);
+      }
+    }
+
+    // Structural grid lines.
+    const grid = this.add.graphics().setPosition(ox, oy).setDepth(-4);
     grid.lineStyle(1, PALETTE.GOLD, 0.08);
     const step = 24;
     for (let x = step; x < boardSize.width; x += step) {
@@ -1071,18 +1161,30 @@ export class GameScene extends Phaser.Scene {
     for (let y = step; y < boardSize.height; y += step) {
       grid.lineBetween(0, y, boardSize.width, y);
     }
-    const vignette = this.add.graphics();
-    vignette.fillStyle(PALETTE.BORDER, 0.35);
-    vignette.fillRect(0, 0, boardSize.width, 6);
-    vignette.fillRect(0, boardSize.height - 6, boardSize.width, 6);
 
-    rt.draw(grid, 0, 0);
-    rt.draw(vignette, 0, 0);
-    grid.destroy();
-    vignette.destroy();
+    // Scanlines for an arcane-device feel.
+    const scan = this.add.graphics().setPosition(ox, oy).setDepth(-3);
+    scan.fillStyle(0x000000, 0.1);
+    for (let y = 0; y < boardSize.height; y += 4) {
+      scan.fillRect(0, y, boardSize.width, 2);
+    }
 
-    this.background = rt;
-    this.sweep = this.add.graphics().setDepth(-4);
+    // Inner vignette to focus the eye toward the center.
+    const vignette = this.add.graphics().setPosition(ox, oy).setDepth(-3);
+    const vSteps = 10;
+    for (let i = 0; i < vSteps; i++) {
+      const inset = (i / vSteps) * 28;
+      const a = 0.08 * (i / vSteps);
+      vignette.lineStyle(2, PALETTE.BORDER, a);
+      vignette.strokeRect(inset, inset, boardSize.width - inset * 2, boardSize.height - inset * 2);
+    }
+
+    this.background = base;
+    this.bgGlow = glow;
+    this.bgGrid = grid;
+    this.bgScan = scan;
+    this.bgVignette = vignette;
+    this.sweep = this.add.graphics().setDepth(-4).setPosition(ox, oy);
   }
 
   private animateBackground(delta: number): void {
@@ -1092,12 +1194,7 @@ export class GameScene extends Phaser.Scene {
     const y = phase * size.height;
     this.sweep.clear();
     this.sweep.lineStyle(2, PALETTE.CYAN, 0.16);
-    this.sweep.lineBetween(
-      this.boardOrigin.x,
-      this.boardOrigin.y + y,
-      this.boardOrigin.x + size.width,
-      this.boardOrigin.y + y,
-    );
+    this.sweep.lineBetween(0, y, size.width, y);
   }
 
   private renderOverlay(): void {
@@ -1189,6 +1286,12 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
+    // Soft outer glow behind each panel so the HUD reads as a lit instrument.
+    this.hudChrome.fillStyle(PALETTE.GOLD, 0.06);
+    this.hudChrome.fillRoundedRect(frameLeft - 4, frameTop - 4, frameWidth + 8, HUD_FRAME_HEIGHT + 8, 10);
+    this.hudChrome.fillStyle(PALETTE.SAND, 0.05);
+    this.hudChrome.fillRoundedRect(sealLeft - 4, frameTop - 4, sealSize + 8, HUD_FRAME_HEIGHT + 8, 10);
+
     drawChamferedPanel(
       this.hudChrome,
       frameLeft,
@@ -1211,6 +1314,10 @@ export class GameScene extends Phaser.Scene {
       PALETTE.GOLD,
       0.7,
     );
+    // Inner top highlight to give the panels a beveled, metallic sheen.
+    this.hudChrome.lineStyle(1, PALETTE.WHITE, 0.08);
+    this.hudChrome.lineBetween(frameLeft + 6, frameTop + 4, frameLeft + frameWidth - 6, frameTop + 4);
+    this.hudChrome.lineBetween(sealLeft + 6, frameTop + 4, sealLeft + sealSize - 6, frameTop + 4);
 
     this.hudSignal.lineStyle(1, PALETTE.CYAN, 0.45);
     this.hudSignal.lineBetween(

@@ -571,5 +571,188 @@ export function mountLauncher(options?: {
     })();
   });
 
+  startTraceScope(isReducedMotion);
   updateRoomLabel();
+}
+
+type TraceScopeColors = {
+  void: string;
+  cyan: string;
+  gold: string;
+  amber: string;
+};
+
+function startTraceScope(reduced: boolean): void {
+  const canvas = document.querySelector<HTMLCanvasElement>(
+    "[data-launcher-scope-canvas]",
+  );
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+
+  const readVars = (): TraceScopeColors => {
+    const shell = document.querySelector<HTMLElement>("#launcher-shell");
+    const style = getComputedStyle(shell ?? document.documentElement);
+    const value = (name: string, fallback: string): string => {
+      const v = style.getPropertyValue(name).trim();
+      return v || fallback;
+    };
+    return {
+      void: value("--launcher-void", "#09070f"),
+      cyan: value("--launcher-cyan", "#93dddd"),
+      gold: value("--launcher-gold", "#e4c26a"),
+      amber: value("--launcher-amber", "#d7792b"),
+    };
+  };
+
+  const resize = (): { w: number; h: number } => {
+    const rect = canvas.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = Math.max(1, Math.round(rect.width * dpr));
+    const h = Math.max(1, Math.round(rect.height * dpr));
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width = w;
+      canvas.height = h;
+    }
+    return { w, h };
+  };
+
+  if (reduced) {
+    // Static, fully-resolved capture: a glowing territory + a settled tracer.
+    const { w, h } = resize();
+    const c = readVars();
+    const m = 14;
+    ctx.fillStyle = c.void;
+    ctx.fillRect(0, 0, w, h);
+    const region = [
+      { x: m, y: m },
+      { x: w * 0.58, y: m },
+      { x: w * 0.58, y: h * 0.62 },
+      { x: m, y: h * 0.62 },
+    ];
+    ctx.beginPath();
+    region.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
+    ctx.closePath();
+    ctx.fillStyle = "rgba(147, 221, 221, 0.12)";
+    ctx.fill();
+    ctx.lineWidth = 3 * (window.devicePixelRatio || 1);
+    ctx.strokeStyle = c.cyan;
+    ctx.shadowColor = c.cyan;
+    ctx.shadowBlur = 12 * (window.devicePixelRatio || 1);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = c.cyan;
+    ctx.beginPath();
+    ctx.arc(w * 0.58, h * 0.62, 4 * (window.devicePixelRatio || 1), 0, Math.PI * 2);
+    ctx.fill();
+    return;
+  }
+
+  // Animated: a tracer traces a closing loop, locks a territory, then a chaser
+  // drifts across. Loops on a slow cycle.
+  const loopMs = 5200;
+  let raf = 0;
+  const tick = (t: number): void => {
+    const { w, h } = resize();
+    const c = readVars();
+    const dpr = window.devicePixelRatio || 1;
+    const progress = (t % loopMs) / loopMs;
+    ctx.fillStyle = c.void;
+    ctx.fillRect(0, 0, w, h);
+
+    const m = 14 * dpr;
+    const pts = [
+      { x: m, y: m },
+      { x: w - m, y: m },
+      { x: w - m, y: h * 0.66 },
+      { x: w * 0.34, y: h * 0.66 },
+      { x: w * 0.34, y: h - m },
+      { x: m, y: h - m },
+    ];
+    const segCount = pts.length - 1;
+    const drawUpTo = (frac: number): Array<{ x: number; y: number }> => {
+      const f = Math.max(0, Math.min(1, frac));
+      const scaled = f * segCount;
+      const out = pts.slice(0, Math.floor(scaled) + 1);
+      const tail = scaled - Math.floor(scaled);
+      const a = pts[Math.floor(scaled)]!;
+      const b = pts[Math.min(segCount, Math.floor(scaled) + 1)]!;
+      out[out.length - 1] = {
+        x: a.x + (b.x - a.x) * tail,
+        y: a.y + (b.y - a.y) * tail,
+      };
+      return out;
+    };
+
+    const tracePhase = 0.62;
+    const holdPhase = 0.82;
+    const tracer = drawUpTo(progress / tracePhase);
+    const head = tracer[tracer.length - 1]!;
+
+    // Faint dot grid for the "instrument" feel.
+    ctx.fillStyle = "rgba(228, 194, 106, 0.08)";
+    const step = 16 * dpr;
+    for (let x = step; x < w; x += step) {
+      for (let y = step; y < h; y += step) {
+        ctx.fillRect(x, y, dpr, dpr);
+      }
+    }
+
+    // Committed territory once the loop closes.
+    if (progress > tracePhase) {
+      const lock = Math.min(1, (progress - tracePhase) / (holdPhase - tracePhase));
+      ctx.beginPath();
+      pts.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
+      ctx.closePath();
+      ctx.fillStyle = "rgba(147, 221, 221, 0.1)";
+      ctx.fill();
+      ctx.lineWidth = 2.5 * dpr;
+      ctx.strokeStyle = c.cyan;
+      ctx.shadowColor = c.cyan;
+      ctx.shadowBlur = (6 + 10 * lock) * dpr;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
+
+    // Gold tracer line + glowing tip.
+    if (tracer.length > 1) {
+      ctx.beginPath();
+      tracer.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
+      ctx.lineWidth = 3 * dpr;
+      ctx.strokeStyle = c.gold;
+      ctx.shadowColor = c.gold;
+      ctx.shadowBlur = 8 * dpr;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      const pulse = 0.5 + 0.5 * Math.sin(t / 160);
+      ctx.beginPath();
+      ctx.arc(head.x, head.y, (3 + 2 * pulse) * dpr, 0, Math.PI * 2);
+      ctx.fillStyle = c.cyan;
+      ctx.shadowColor = c.cyan;
+      ctx.shadowBlur = 10 * dpr;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+
+    // A chaser drifts along the bottom edge.
+    const cx = m + ((w - 2 * m) * ((t / 2600) % 1));
+    ctx.beginPath();
+    ctx.moveTo(cx - 7 * dpr, head ? h - m * 0.4 : h - m);
+    ctx.lineTo(cx + 7 * dpr, h - m * 0.4);
+    ctx.lineWidth = 2 * dpr;
+    ctx.strokeStyle = c.amber;
+    ctx.shadowColor = c.amber;
+    ctx.shadowBlur = 6 * dpr;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    raf = window.requestAnimationFrame(tick);
+  };
+
+  raf = window.requestAnimationFrame(tick);
+  window.addEventListener(
+    "beforeunload",
+    () => window.cancelAnimationFrame(raf),
+    { once: true },
+  );
 }

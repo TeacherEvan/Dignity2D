@@ -347,6 +347,52 @@
   line-height: 1.55;
 }
 
+[data-launcher-scope] {
+  position: relative;
+  margin-top: 18px;
+  padding: 12px 12px 10px;
+  background:
+    linear-gradient(180deg, rgba(16, 13, 22, 0.82), rgba(9, 8, 14, 0.78));
+  border: 1px solid rgba(183, 148, 88, 0.2);
+  box-shadow:
+    inset 0 0 0 1px rgba(228, 194, 106, 0.06),
+    0 14px 30px rgba(0, 0, 0, 0.26);
+  clip-path: polygon(
+    0 12px,
+    12px 0,
+    100% 0,
+    100% calc(100% - 12px),
+    calc(100% - 12px) 100%,
+    0 100%
+  );
+  overflow: hidden;
+}
+
+[data-launcher-scope-canvas] {
+  display: block;
+  width: 100%;
+  height: 168px;
+  border-radius: 3px;
+}
+
+[data-launcher-scope-label] {
+  position: absolute;
+  left: 18px;
+  bottom: 14px;
+  font-family: "Share Tech Mono", "DejaVu Sans Mono", monospace;
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  color: var(--launcher-cyan);
+  opacity: 0.62;
+  text-transform: uppercase;
+  pointer-events: none;
+  text-shadow: 0 0 10px rgba(147, 221, 221, 0.35);
+}
+
+#launcher-shell[data-motion-mode="reduced"] [data-launcher-scope-label] {
+  opacity: 0.78;
+}
+
 [data-launcher-divider="hero"] {
   display: flex;
   align-items: center;

@@ -11,6 +11,10 @@ export function createWelcomeScreenHtml(): string {
             <p data-launcher-kicker="brand">Dignity Arcade</p>
             <h1 id="welcome-title">Trace the line. Hold the ground.</h1>
             <p data-launcher-copy-role="summary">Play solo, open a room, join a friend, or bring a private image into the run.</p>
+            <div data-launcher-scope aria-hidden="true">
+              <canvas data-launcher-scope-canvas></canvas>
+              <span data-launcher-scope-label>SIGNAL // LIVE TRACE</span>
+            </div>
           </header>
 
           <div data-launcher-divider="hero" data-launcher-reveal="divider" aria-hidden="true">
