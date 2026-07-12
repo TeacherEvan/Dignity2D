@@ -153,6 +153,8 @@ describe("RoomClient", () => {
       imageId: "img-1",
       playerIds: ["p1", "p2"],
     });
-    expect(onError).toHaveBeenCalledWith(new Error("Malformed server message."));
+    expect(onError).toHaveBeenCalledWith(
+      new Error("Malformed server message."),
+    );
   });
 });

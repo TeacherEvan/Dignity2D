@@ -49,8 +49,16 @@ describe("VoronoiPostFX", () => {
       name: "VoronoiPostFX",
       fragShader: VORONOI_FRAG,
     });
-    expect(pipelineInstances[0]?.set1f).toHaveBeenNthCalledWith(1, "time", 0.016);
-    expect(pipelineInstances[0]?.set1f).toHaveBeenNthCalledWith(2, "time", 0.032);
+    expect(pipelineInstances[0]?.set1f).toHaveBeenNthCalledWith(
+      1,
+      "time",
+      0.016,
+    );
+    expect(pipelineInstances[0]?.set1f).toHaveBeenNthCalledWith(
+      2,
+      "time",
+      0.032,
+    );
   });
 
   it("uses Phaser-compatible mediump GLSL", () => {

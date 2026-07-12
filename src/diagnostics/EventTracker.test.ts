@@ -64,7 +64,11 @@ describe("EventTracker", () => {
     snapshot.push({ name: "welcome_viewed", at: 99, payload: {} });
 
     expect(tracker.snapshot()).toEqual([
-      { name: "layout_saved", at: 2, payload: { layoutId: "desktop-standard" } },
+      {
+        name: "layout_saved",
+        at: 2,
+        payload: { layoutId: "desktop-standard" },
+      },
     ]);
   });
 });

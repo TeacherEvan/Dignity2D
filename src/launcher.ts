@@ -24,11 +24,20 @@ type LauncherState = {
 };
 
 type LauncherDiagnosticsOptions = {
-  sink?: (events: Array<{ name: string; at: number; payload: Record<string, string | number | boolean> }>) => void;
+  sink?: (
+    events: Array<{
+      name: string;
+      at: number;
+      payload: Record<string, string | number | boolean>;
+    }>,
+  ) => void;
   now?: () => number;
 };
 
-function formatRoomFailureStatus(error: unknown, action: "join" | "create"): string {
+function formatRoomFailureStatus(
+  error: unknown,
+  action: "join" | "create",
+): string {
   if (error instanceof Error) {
     if (error.message.includes("VITE_SERVER_URL")) {
       return "Online rooms need the backend.";
@@ -76,14 +85,16 @@ export function mountLauncher(options?: {
   const displayProfile = readDisplayProfileFromWindow();
   const layout = getStandardLayout(displayProfile);
   const savedLayout = loadLayoutPreference(displayProfile.deviceClass);
-  const resolvedLayout = resolveLayoutWithPreference(displayProfile, savedLayout);
+  const resolvedLayout = resolveLayoutWithPreference(
+    displayProfile,
+    savedLayout,
+  );
   const resolvedLayoutId = resolvedLayout.id;
-  let activeLayoutPreference =
-    savedLayout ?? {
-      layoutId: layout.id,
-      joystickScale: 1,
-      handedness: "left" as Handedness,
-    };
+  let activeLayoutPreference = savedLayout ?? {
+    layoutId: layout.id,
+    joystickScale: 1,
+    handedness: "left" as Handedness,
+  };
 
   const shell = document.querySelector<HTMLElement>("#launcher-shell");
   const motionMode = resolveMotionMode();
@@ -112,21 +123,18 @@ export function mountLauncher(options?: {
   const returnButton = document.querySelector<HTMLButtonElement>(
     "#return-to-launcher-button",
   );
-  const quickPlayButton = document.querySelector<HTMLButtonElement>(
-    "#quick-play-button",
-  );
+  const quickPlayButton =
+    document.querySelector<HTMLButtonElement>("#quick-play-button");
   const createRoomButton = document.querySelector<HTMLButtonElement>(
     "#create-room-button",
   );
-  const joinRoomButton = document.querySelector<HTMLButtonElement>(
-    "#join-room-button",
-  );
+  const joinRoomButton =
+    document.querySelector<HTMLButtonElement>("#join-room-button");
   const uploadTriggerButton = document.querySelector<HTMLButtonElement>(
     "#upload-trigger-button",
   );
-  const settingsButton = document.querySelector<HTMLButtonElement>(
-    "#settings-button",
-  );
+  const settingsButton =
+    document.querySelector<HTMLButtonElement>("#settings-button");
   const accessibilityButton = document.querySelector<HTMLButtonElement>(
     "#accessibility-button",
   );
@@ -154,7 +162,12 @@ export function mountLauncher(options?: {
   let statusToneTimer = 0;
 
   const trackLauncherEvent = (
-    name: "welcome_viewed" | "display_detected" | "layout_loaded" | "layout_saved" | "solo_started",
+    name:
+      | "welcome_viewed"
+      | "display_detected"
+      | "layout_loaded"
+      | "layout_saved"
+      | "solo_started",
     payload: Record<string, string | number | boolean> = {},
   ): void => {
     diagnostics?.track(name, payload);
@@ -287,7 +300,8 @@ export function mountLauncher(options?: {
       settingsHandedness.value = activeLayoutPreference.handedness;
     }
     if (settingsJoystickScale) {
-      settingsJoystickScale.value = activeLayoutPreference.joystickScale.toFixed(2);
+      settingsJoystickScale.value =
+        activeLayoutPreference.joystickScale.toFixed(2);
     }
     updateSettingsReadout(activeLayoutPreference.joystickScale);
   };
@@ -366,10 +380,7 @@ export function mountLauncher(options?: {
     setStatus("Ready", "cool");
   });
 
-  const bindCue = (
-    element: HTMLButtonElement | null,
-    cue: string,
-  ): void => {
+  const bindCue = (element: HTMLButtonElement | null, cue: string): void => {
     if (!element || isReducedMotion) return;
 
     const activateCue = () => {
@@ -394,7 +405,9 @@ export function mountLauncher(options?: {
   });
 
   accessibilityButton?.addEventListener("click", () => {
-    const willOpen = accessibilityPanel ? accessibilityPanel.hidden === true : true;
+    const willOpen = accessibilityPanel
+      ? accessibilityPanel.hidden === true
+      : true;
     closePanels();
     renderAccessibilityPanel();
     setPanelVisibility(accessibilityPanel, willOpen);
@@ -421,64 +434,63 @@ export function mountLauncher(options?: {
   });
 
   quickPlayButton?.addEventListener("click", () => {
-      resetRoomSessionState();
-      trackLauncherEvent("solo_started", { mode: "solo" });
-      void startGame({
-        imageId: state.selectedImageId,
-        imageUrl: state.selectedImageUrl,
-        layoutId: resolvedLayoutId,
-      });
+    resetRoomSessionState();
+    trackLauncherEvent("solo_started", { mode: "solo" });
+    void startGame({
+      imageId: state.selectedImageId,
+      imageUrl: state.selectedImageUrl,
+      layoutId: resolvedLayoutId,
     });
+  });
 
   createRoomButton?.addEventListener("click", async () => {
-      setStatus("Creating room...");
-      try {
-        const { createRoomSession } = await import("./net/serverApi");
-        const session = await createRoomSession(state.selectedImageId);
-        state.roomId = session.roomId;
-        state.playerId = session.playerId;
-        state.roomPlayerIds = session.playerIds;
-        state.stateVersion = session.stateVersion;
-        state.selectedImageId = session.imageId;
-        if (session.imageUrl) {
-          setUploadPresentation("chosen", session.imageId, session.imageUrl);
-        } else {
-          setUploadPresentation("veiled");
-        }
-        if (roomInput) {
-          roomInput.value = session.roomId;
-        }
-        updateRoomLabel(`Room ready: ${session.roomId}`);
-        setStatus(`Room ${session.roomId} ready.`);
-        await startGame({
-          roomId: session.roomId,
-          playerId: session.playerId,
-          roomPlayerIds: session.playerIds,
-          imageId: session.imageId,
-          imageUrl: undefined,
-          stateVersion: session.stateVersion,
-          layoutId: resolvedLayoutId,
-        });
-      } catch (error) {
-        setStatus(formatRoomFailureStatus(error, "create"));
+    setStatus("Creating room...");
+    try {
+      const { createRoomSession } = await import("./net/serverApi");
+      const session = await createRoomSession(state.selectedImageId);
+      state.roomId = session.roomId;
+      state.playerId = session.playerId;
+      state.roomPlayerIds = session.playerIds;
+      state.stateVersion = session.stateVersion;
+      state.selectedImageId = session.imageId;
+      if (session.imageUrl) {
+        setUploadPresentation("chosen", session.imageId, session.imageUrl);
+      } else {
+        setUploadPresentation("veiled");
       }
-    });
+      if (roomInput) {
+        roomInput.value = session.roomId;
+      }
+      updateRoomLabel(`Room ready: ${session.roomId}`);
+      setStatus(`Room ${session.roomId} ready.`);
+      await startGame({
+        roomId: session.roomId,
+        playerId: session.playerId,
+        roomPlayerIds: session.playerIds,
+        imageId: session.imageId,
+        imageUrl: undefined,
+        stateVersion: session.stateVersion,
+        layoutId: resolvedLayoutId,
+      });
+    } catch (error) {
+      setStatus(formatRoomFailureStatus(error, "create"));
+    }
+  });
 
   joinRoomButton?.addEventListener("click", async () => {
-      const roomId = roomInput?.value.trim() ?? "";
-      if (!roomId) {
-        setStatus("Enter a room ID first.");
-        return;
-      }
+    const roomId = roomInput?.value.trim() ?? "";
+    if (!roomId) {
+      setStatus("Enter a room ID first.");
+      return;
+    }
 
-      setStatus(`Joining ${roomId}...`);
-      try {
-        const session =
-          state.roomId === roomId && state.playerId
-            ? await (await import("./net/serverApi")).reconnectRoom(
-                roomId,
-                state.playerId,
-              ).then((reconnected) => ({
+    setStatus(`Joining ${roomId}...`);
+    try {
+      const session =
+        state.roomId === roomId && state.playerId
+          ? await (await import("./net/serverApi"))
+              .reconnectRoom(roomId, state.playerId)
+              .then((reconnected) => ({
                 roomId,
                 playerId: state.playerId!,
                 playerIds: reconnected.playerIds,
@@ -489,34 +501,34 @@ export function mountLauncher(options?: {
                 bytes: null,
                 retention: null,
               }))
-            : await (await import("./net/serverApi")).joinRoomSession(roomId);
-        state.roomId = session.roomId;
-        state.playerId = session.playerId;
-        state.roomPlayerIds = session.playerIds;
-        state.stateVersion = session.stateVersion;
-        state.selectedImageId = session.imageId;
-        state.selectedImageUrl = undefined;
-        state.selectedFileName = undefined;
-        setUploadPresentation("veiled");
-        updateRoomLabel(`Joined room: ${session.roomId}`);
-        setStatus(`Joined ${session.roomId}.`);
-        await startGame({
-          roomId: session.roomId,
-          playerId: session.playerId,
-          roomPlayerIds: session.playerIds,
-          imageId: state.selectedImageId,
-          imageUrl: undefined,
-          stateVersion: session.stateVersion,
-          layoutId: resolvedLayoutId,
-        });
-      } catch (error) {
-        setStatus(formatRoomFailureStatus(error, "join"));
-      }
-    });
+          : await (await import("./net/serverApi")).joinRoomSession(roomId);
+      state.roomId = session.roomId;
+      state.playerId = session.playerId;
+      state.roomPlayerIds = session.playerIds;
+      state.stateVersion = session.stateVersion;
+      state.selectedImageId = session.imageId;
+      state.selectedImageUrl = undefined;
+      state.selectedFileName = undefined;
+      setUploadPresentation("veiled");
+      updateRoomLabel(`Joined room: ${session.roomId}`);
+      setStatus(`Joined ${session.roomId}.`);
+      await startGame({
+        roomId: session.roomId,
+        playerId: session.playerId,
+        roomPlayerIds: session.playerIds,
+        imageId: state.selectedImageId,
+        imageUrl: undefined,
+        stateVersion: session.stateVersion,
+        layoutId: resolvedLayoutId,
+      });
+    } catch (error) {
+      setStatus(formatRoomFailureStatus(error, "join"));
+    }
+  });
 
   uploadTriggerButton?.addEventListener("click", () => {
-      uploadInput?.click();
-    });
+    uploadInput?.click();
+  });
 
   uploadInput?.addEventListener("change", () => {
     const file = uploadInput.files?.[0] ?? null;

@@ -27,12 +27,18 @@ function calculateCoveredArea(
   imageSize: GameState["imageSize"],
 ): number {
   let coveredCells = 0;
-  const minX = Math.max(0, Math.floor(Math.min(...polygon.map((point) => point.x))));
+  const minX = Math.max(
+    0,
+    Math.floor(Math.min(...polygon.map((point) => point.x))),
+  );
   const maxX = Math.min(
     imageSize.width,
     Math.ceil(Math.max(...polygon.map((point) => point.x))),
   );
-  const minY = Math.max(0, Math.floor(Math.min(...polygon.map((point) => point.y))));
+  const minY = Math.max(
+    0,
+    Math.floor(Math.min(...polygon.map((point) => point.y))),
+  );
   const maxY = Math.min(
     imageSize.height,
     Math.ceil(Math.max(...polygon.map((point) => point.y))),
@@ -44,7 +50,11 @@ function calculateCoveredArea(
       if (!isPointInPolygon(sample, polygon)) {
         continue;
       }
-      if (priorPolygons.some((priorPolygon) => isPointInPolygon(sample, priorPolygon))) {
+      if (
+        priorPolygons.some((priorPolygon) =>
+          isPointInPolygon(sample, priorPolygon),
+        )
+      ) {
         continue;
       }
       coveredCells += 1;
@@ -79,11 +89,7 @@ export function commitCaptureFromTrail(
     (totalArea, capture) => totalArea + capture.area,
     0,
   );
-  const area = calculateCoveredArea(
-    polygon,
-    priorPolygons,
-    state.imageSize,
-  );
+  const area = calculateCoveredArea(polygon, priorPolygons, state.imageSize);
   if (area <= 0) return clearTrail(state, trail.playerId);
 
   const capture: CaptureRegion = {

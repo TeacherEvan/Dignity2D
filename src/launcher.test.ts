@@ -70,9 +70,9 @@ describe("launcher layout integration", () => {
 
     expect(document.querySelectorAll("#app-shell")).toHaveLength(1);
     expect(document.querySelectorAll("#launcher-shell")).toHaveLength(1);
-    expect(document.querySelector<HTMLElement>("#launcher-shell")?.dataset.layoutId).toBe(
-      "desktop-standard",
-    );
+    expect(
+      document.querySelector<HTMLElement>("#launcher-shell")?.dataset.layoutId,
+    ).toBe("desktop-standard");
   });
 
   it("keeps a prerendered launcher ready during hydration", () => {
@@ -80,9 +80,10 @@ describe("launcher layout integration", () => {
 
     mountLauncher();
 
-    expect(document.querySelector<HTMLElement>("#launcher-shell")?.dataset.launchPhase).toBe(
-      "ready",
-    );
+    expect(
+      document.querySelector<HTMLElement>("#launcher-shell")?.dataset
+        .launchPhase,
+    ).toBe("ready");
   });
 
   it("settles the launcher ignition phase after mount", async () => {
@@ -146,9 +147,8 @@ describe("launcher layout integration", () => {
       },
     ]);
 
-    const settingsButton = document.querySelector<HTMLButtonElement>(
-      "#settings-button",
-    );
+    const settingsButton =
+      document.querySelector<HTMLButtonElement>("#settings-button");
     const joystickScaleInput = document.querySelector<HTMLInputElement>(
       "#settings-joystick-scale",
     );
@@ -179,9 +179,15 @@ describe("launcher layout integration", () => {
     ]);
 
     const flattenedEvents = sink.mock.calls.flatMap(([events]) => events);
-    expect(flattenedEvents.some((event) => "roomId" in event.payload)).toBe(false);
-    expect(flattenedEvents.some((event) => "imageId" in event.payload)).toBe(false);
-    expect(flattenedEvents.some((event) => "imageUrl" in event.payload)).toBe(false);
+    expect(flattenedEvents.some((event) => "roomId" in event.payload)).toBe(
+      false,
+    );
+    expect(flattenedEvents.some((event) => "imageId" in event.payload)).toBe(
+      false,
+    );
+    expect(flattenedEvents.some((event) => "imageUrl" in event.payload)).toBe(
+      false,
+    );
   });
 
   it("shows short join failure status text", async () => {
@@ -206,9 +212,9 @@ describe("launcher layout integration", () => {
       document.querySelector<HTMLParagraphElement>("#home-status")?.dataset
         .emberTone,
     ).toBe("warm");
-    expect(document.querySelector<HTMLElement>("#launcher-shell")?.dataset.activeCue).toBe(
-      "status",
-    );
+    expect(
+      document.querySelector<HTMLElement>("#launcher-shell")?.dataset.activeCue,
+    ).toBe("status");
   });
 
   it("keeps only one launcher cue active at a time", () => {
@@ -218,9 +224,8 @@ describe("launcher layout integration", () => {
       mountLauncher();
 
       const shell = document.querySelector<HTMLElement>("#launcher-shell");
-      const quickPlayButton = document.querySelector<HTMLButtonElement>(
-        "#quick-play-button",
-      );
+      const quickPlayButton =
+        document.querySelector<HTMLButtonElement>("#quick-play-button");
       const uploadTriggerButton = document.querySelector<HTMLButtonElement>(
         "#upload-trigger-button",
       );
@@ -260,7 +265,9 @@ describe("launcher layout integration", () => {
     document.querySelector<HTMLButtonElement>("#quick-play-button")?.click();
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(document.querySelector<HTMLElement>("#launcher-shell")?.dataset).toMatchObject({
+    expect(
+      document.querySelector<HTMLElement>("#launcher-shell")?.dataset,
+    ).toMatchObject({
       deviceClass: "phone",
       layoutId: "portrait-phone-standard",
     });
@@ -289,7 +296,9 @@ describe("launcher layout integration", () => {
 
     mountLauncher();
 
-    expect(document.querySelector<HTMLElement>("#launcher-shell")?.dataset).toMatchObject({
+    expect(
+      document.querySelector<HTMLElement>("#launcher-shell")?.dataset,
+    ).toMatchObject({
       deviceClass: "phone",
       layoutId: "landscape-phone-standard",
     });
@@ -316,9 +325,12 @@ describe("launcher layout integration", () => {
       "Room ready: room-7",
     );
     expect(
-      document.querySelector('[data-launcher-upload-label="title"]')?.textContent,
+      document.querySelector('[data-launcher-upload-label="title"]')
+        ?.textContent,
     ).toBe("Chosen image");
-    expect(document.querySelector("#upload-filename")?.textContent).toBe("img-7");
+    expect(document.querySelector("#upload-filename")?.textContent).toBe(
+      "img-7",
+    );
     expect(startGameSession).toHaveBeenCalledWith(
       expect.objectContaining({
         roomId: "room-7",
@@ -357,7 +369,8 @@ describe("launcher layout integration", () => {
       "Joined room: room-9",
     );
     expect(
-      document.querySelector('[data-launcher-upload-label="title"]')?.textContent,
+      document.querySelector('[data-launcher-upload-label="title"]')
+        ?.textContent,
     ).toBe("Veiled image");
     expect(document.querySelector("#upload-filename")?.textContent).toBe(
       "Default concealed image in use.",
@@ -374,18 +387,17 @@ describe("launcher layout integration", () => {
   });
 
   it("clears a prior visible preview when joining a room without an image url", async () => {
-    vi.mocked(createRoomSession)
-      .mockResolvedValueOnce({
-        roomId: "room-7",
-        playerId: "p-7",
-        playerIds: ["p-7"],
-        playerCount: 1,
-        imageId: "img-7",
-        stateVersion: 3,
-        imageUrl: "https://private.test/img-7",
-        bytes: null,
-        retention: null,
-      });
+    vi.mocked(createRoomSession).mockResolvedValueOnce({
+      roomId: "room-7",
+      playerId: "p-7",
+      playerIds: ["p-7"],
+      playerCount: 1,
+      imageId: "img-7",
+      stateVersion: 3,
+      imageUrl: "https://private.test/img-7",
+      bytes: null,
+      retention: null,
+    });
     vi.mocked(joinRoomSession).mockResolvedValue({
       roomId: "room-9",
       playerId: "p-9",
@@ -399,11 +411,13 @@ describe("launcher layout integration", () => {
     });
 
     mountLauncher();
-    const roomInput = document.querySelector<HTMLInputElement>("#room-id-input");
+    const roomInput =
+      document.querySelector<HTMLInputElement>("#room-id-input");
     const returnButton = document.querySelector<HTMLButtonElement>(
       "#return-to-launcher-button",
     );
-    const uploadPreview = document.querySelector<HTMLImageElement>("#upload-preview");
+    const uploadPreview =
+      document.querySelector<HTMLImageElement>("#upload-preview");
     if (!roomInput || !returnButton || !uploadPreview) {
       throw new Error("launcher controls missing in preview reset test");
     }
@@ -419,7 +433,8 @@ describe("launcher layout integration", () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(
-      document.querySelector('[data-launcher-upload-label="title"]')?.textContent,
+      document.querySelector('[data-launcher-upload-label="title"]')
+        ?.textContent,
     ).toBe("Veiled image");
     expect(document.querySelector("#upload-filename")?.textContent).toBe(
       "Default concealed image in use.",
@@ -530,14 +545,19 @@ describe("launcher layout integration", () => {
     });
 
     mountLauncher();
-    const uploadInput = document.querySelector<HTMLInputElement>("#upload-input");
+    const uploadInput =
+      document.querySelector<HTMLInputElement>("#upload-input");
     if (!uploadInput) {
       throw new Error("upload input missing in upload status test");
     }
 
     Object.defineProperty(uploadInput, "files", {
       configurable: true,
-      value: [new File([new Uint8Array([1, 2, 3])], "signal.png", { type: "image/png" })],
+      value: [
+        new File([new Uint8Array([1, 2, 3])], "signal.png", {
+          type: "image/png",
+        }),
+      ],
     });
 
     uploadInput.dispatchEvent(new Event("change"));
@@ -580,25 +600,23 @@ describe("launcher layout integration", () => {
 
     mountLauncher();
 
-    const settingsButton = document.querySelector<HTMLButtonElement>(
-      "#settings-button",
-    );
+    const settingsButton =
+      document.querySelector<HTMLButtonElement>("#settings-button");
     const handednessSelect = document.querySelector<HTMLSelectElement>(
       "#settings-handedness",
     );
     const joystickScaleInput = document.querySelector<HTMLInputElement>(
       "#settings-joystick-scale",
     );
-    const settingsPanel = document.querySelector<HTMLElement>(
-      "#settings-panel",
-    );
+    const settingsPanel =
+      document.querySelector<HTMLElement>("#settings-panel");
 
     settingsButton?.click();
 
     expect(settingsPanel?.hidden).toBe(false);
-    expect(document.querySelector<HTMLElement>("#launcher-shell")?.dataset.openPanel).toBe(
-      "settings-panel",
-    );
+    expect(
+      document.querySelector<HTMLElement>("#launcher-shell")?.dataset.openPanel,
+    ).toBe("settings-panel");
     expect(handednessSelect?.value).toBe("left");
     expect(joystickScaleInput?.value).toBe("1.00");
 
@@ -611,7 +629,9 @@ describe("launcher layout integration", () => {
     joystickScaleInput.value = "1.25";
     joystickScaleInput.dispatchEvent(new Event("input"));
 
-    expect(JSON.parse(localStorage.getItem("dignity.layout.phone.v1") ?? "null")).toEqual({
+    expect(
+      JSON.parse(localStorage.getItem("dignity.layout.phone.v1") ?? "null"),
+    ).toEqual({
       layoutId: "portrait-phone-standard",
       joystickScale: 1.25,
       handedness: "right",
@@ -637,18 +657,18 @@ describe("launcher layout integration", () => {
 
     document.querySelector<HTMLButtonElement>("#accessibility-button")?.click();
 
-    expect(document.querySelector<HTMLElement>("#accessibility-panel")?.hidden).toBe(
-      false,
-    );
-    expect(document.querySelector<HTMLElement>("#launcher-shell")?.dataset.openPanel).toBe(
-      "accessibility-panel",
-    );
-    expect(document.querySelector("#accessibility-motion-mode")?.textContent).toBe(
-      "Reduced motion active",
-    );
-    expect(document.querySelector("#accessibility-guidance")?.textContent).toContain(
-      "Motion is kept steady",
-    );
+    expect(
+      document.querySelector<HTMLElement>("#accessibility-panel")?.hidden,
+    ).toBe(false);
+    expect(
+      document.querySelector<HTMLElement>("#launcher-shell")?.dataset.openPanel,
+    ).toBe("accessibility-panel");
+    expect(
+      document.querySelector("#accessibility-motion-mode")?.textContent,
+    ).toBe("Reduced motion active");
+    expect(
+      document.querySelector("#accessibility-guidance")?.textContent,
+    ).toContain("Motion is kept steady");
   });
 
   it("keeps reduced motion mode free of transient cue state", async () => {
@@ -669,9 +689,8 @@ describe("launcher layout integration", () => {
 
       const shell = document.querySelector<HTMLElement>("#launcher-shell");
       const status = document.querySelector<HTMLElement>("#home-status");
-      const quickPlayButton = document.querySelector<HTMLButtonElement>(
-        "#quick-play-button",
-      );
+      const quickPlayButton =
+        document.querySelector<HTMLButtonElement>("#quick-play-button");
 
       quickPlayButton?.focus();
       expect(shell?.dataset.activeCue).toBeUndefined();

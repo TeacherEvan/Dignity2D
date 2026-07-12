@@ -104,12 +104,17 @@ describe("bootstrap", () => {
   });
 
   it("resizes the existing game instance when the next launch uses a different layout viewport", async () => {
-    await startGameSession({ imageId: "img-1", layoutId: "portrait-phone-standard" });
+    await startGameSession({
+      imageId: "img-1",
+      layoutId: "portrait-phone-standard",
+    });
 
     await startGameSession({ imageId: "img-2", layoutId: "desktop-standard" });
 
     expect(configState.createGameConfig).toHaveBeenCalledTimes(1);
-    expect(configState.resolveRuntimeViewport).toHaveBeenCalledWith("desktop-standard");
+    expect(configState.resolveRuntimeViewport).toHaveBeenCalledWith(
+      "desktop-standard",
+    );
     expect(phaserState.resize).toHaveBeenCalledWith(960, 720);
   });
 

@@ -34,7 +34,8 @@ describe("createWelcomeScreenHtml", () => {
       "Trace the line. Hold the ground.",
     );
     expect(
-      document.querySelector('[data-launcher-copy-role="summary"]')?.textContent,
+      document.querySelector('[data-launcher-copy-role="summary"]')
+        ?.textContent,
     ).toBe(
       "Play solo, open a room, join a friend, or bring a private image into the run.",
     );
@@ -61,7 +62,8 @@ describe("createWelcomeScreenHtml", () => {
 
   it("keeps upload controls private until the player chooses an image", () => {
     document.body.innerHTML = createWelcomeScreenHtml();
-    const uploadInput = document.querySelector<HTMLInputElement>("#upload-input");
+    const uploadInput =
+      document.querySelector<HTMLInputElement>("#upload-input");
     const preview = document.querySelector<HTMLImageElement>("#upload-preview");
 
     expect(uploadInput?.getAttribute("accept")).toBe(
@@ -69,7 +71,8 @@ describe("createWelcomeScreenHtml", () => {
     );
     expect(preview?.style.display).toBe("none");
     expect(
-      document.querySelector('[data-launcher-upload-label="title"]')?.textContent,
+      document.querySelector('[data-launcher-upload-label="title"]')
+        ?.textContent,
     ).toBe("Veiled image");
     expect(document.querySelector("#upload-filename")?.textContent).toBe(
       "Default concealed image in use.",
@@ -99,9 +102,17 @@ describe("createWelcomeScreenHtml", () => {
   it("builds the lower operations band as two instruments around a central spine", () => {
     document.body.innerHTML = createWelcomeScreenHtml();
 
-    expect(document.querySelector('[data-launcher-band="operations"]')).toBeTruthy();
-    expect(document.querySelector('[data-launcher-band-spine="operations"]')).toBeTruthy();
-    expect(document.querySelector('[data-launcher-instrument="room"]')).toBeTruthy();
-    expect(document.querySelector('[data-launcher-instrument="upload"]')).toBeTruthy();
+    expect(
+      document.querySelector('[data-launcher-band="operations"]'),
+    ).toBeTruthy();
+    expect(
+      document.querySelector('[data-launcher-band-spine="operations"]'),
+    ).toBeTruthy();
+    expect(
+      document.querySelector('[data-launcher-instrument="room"]'),
+    ).toBeTruthy();
+    expect(
+      document.querySelector('[data-launcher-instrument="upload"]'),
+    ).toBeTruthy();
   });
 });

@@ -53,7 +53,11 @@ describe("protocol", () => {
 
   it("rejects malformed server messages", () => {
     expect(
-      isServerMessage({ type: "capture-commit", roomId: "room-1", captureId: 1 }),
+      isServerMessage({
+        type: "capture-commit",
+        roomId: "room-1",
+        captureId: 1,
+      }),
     ).toBe(false);
   });
 

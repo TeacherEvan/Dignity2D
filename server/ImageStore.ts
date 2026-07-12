@@ -1,8 +1,5 @@
 import { randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
-import {
-  getRetentionExpiryTime,
-  type Retention,
-} from "./upload/processImage";
+import { getRetentionExpiryTime, type Retention } from "./upload/processImage";
 
 export type StoredImage = {
   id: string;
@@ -17,7 +14,10 @@ export type StoredImage = {
 
 export class ImageStore {
   private readonly images = new Map<string, StoredImage>();
-  private readonly expiryTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private readonly expiryTimers = new Map<
+    string,
+    ReturnType<typeof setTimeout>
+  >();
 
   constructor(private readonly now: () => number = Date.now) {}
 

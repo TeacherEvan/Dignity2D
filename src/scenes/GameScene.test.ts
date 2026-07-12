@@ -283,24 +283,23 @@ describe("GameScene helpers", () => {
     };
     const state = createSceneGameStateForLaunch(launchData, BOARD_SIZE);
 
-    const result = applyRoomStateSyncSnapshot(
-      state,
-      launchData,
-      {
-        type: "state-sync",
-        roomId: "room-1",
-        stateVersion: 2,
-        imageId: "img-1-live",
-        playerIds: ["p1", "p2"],
-      },
-    );
+    const result = applyRoomStateSyncSnapshot(state, launchData, {
+      type: "state-sync",
+      roomId: "room-1",
+      stateVersion: 2,
+      imageId: "img-1-live",
+      playerIds: ["p1", "p2"],
+    });
 
     expect(result.launchData).toMatchObject({
       imageId: "img-1-live",
       roomPlayerIds: ["p2", "p1"],
       stateVersion: 2,
     });
-    expect(result.state.players.map((player) => player.id)).toEqual(["p2", "p1"]);
+    expect(result.state.players.map((player) => player.id)).toEqual([
+      "p2",
+      "p1",
+    ]);
   });
 
   it("reports capture and collision diagnostics from frame advancement", () => {

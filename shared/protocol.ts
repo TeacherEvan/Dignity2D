@@ -44,11 +44,7 @@ function isFiniteNumber(value: unknown): value is number {
 }
 
 function isPoint(value: unknown): value is Point {
-  return (
-    isRecord(value) &&
-    isFiniteNumber(value.x) &&
-    isFiniteNumber(value.y)
-  );
+  return isRecord(value) && isFiniteNumber(value.x) && isFiniteNumber(value.y);
 }
 
 function isTrail(value: unknown): value is Trail {

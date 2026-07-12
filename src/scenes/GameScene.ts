@@ -369,7 +369,9 @@ export function applyRoomStateSyncSnapshot(
     state: {
       ...state,
       players: orderedPlayerIds.map((playerId, index) => {
-        const existingPlayer = state.players.find((player) => player.id === playerId);
+        const existingPlayer = state.players.find(
+          (player) => player.id === playerId,
+        );
         if (existingPlayer) {
           return existingPlayer;
         }
@@ -538,7 +540,10 @@ export class GameScene extends Phaser.Scene {
       this.scale.width,
       this.scale.height,
     );
-    this.state = createSceneGameStateForLaunch(this.launchData, layoutMetrics.boardSize);
+    this.state = createSceneGameStateForLaunch(
+      this.launchData,
+      layoutMetrics.boardSize,
+    );
     this.prefersReducedMotion = this.launchData.motionMode === "reduced";
     this.cursors = this.input.keyboard?.createCursorKeys();
 
@@ -592,9 +597,9 @@ export class GameScene extends Phaser.Scene {
     this.captureGraphics = this.add.graphics();
     this.trailGraphics = this.add.graphics();
     this.playerMarker = this.add.circle(0, 0, 8, PALETTE.CYAN);
-    this.teammateMarkers = this.state.players.slice(1).map(() =>
-      this.add.circle(0, 0, 6, PALETTE.SAND),
-    );
+    this.teammateMarkers = this.state.players
+      .slice(1)
+      .map(() => this.add.circle(0, 0, 6, PALETTE.SAND));
     this.enemyMarkers = this.state.enemies.map(() =>
       this.add.circle(0, 0, 10, PALETTE.AMBER),
     );
@@ -603,16 +608,23 @@ export class GameScene extends Phaser.Scene {
     this.hudSignal = this.add.graphics();
     this.drawHudChrome(layoutMetrics);
 
-    this.revealText = this.add.text(34, layoutMetrics.hudTop + 14, "00% Revealed", {
-      color: PALETTE.css.CYAN,
-      fontFamily: '"Palatino Linotype", Georgia, serif',
-      fontSize: "20px",
-    });
-    this.scoreText = this.add.text(214, layoutMetrics.hudTop + 16, "Score 0", {
-      color: PALETTE.css.GOLD,
-      fontFamily: '"Trebuchet MS", sans-serif',
-      fontSize: "16px",
-    }).setOrigin(1, 0);
+    this.revealText = this.add.text(
+      34,
+      layoutMetrics.hudTop + 14,
+      "00% Revealed",
+      {
+        color: PALETTE.css.CYAN,
+        fontFamily: '"Palatino Linotype", Georgia, serif',
+        fontSize: "20px",
+      },
+    );
+    this.scoreText = this.add
+      .text(214, layoutMetrics.hudTop + 16, "Score 0", {
+        color: PALETTE.css.GOLD,
+        fontFamily: '"Trebuchet MS", sans-serif',
+        fontSize: "16px",
+      })
+      .setOrigin(1, 0);
     this.statusText = this.add.text(
       34,
       layoutMetrics.hudTop + 40,
@@ -653,7 +665,11 @@ export class GameScene extends Phaser.Scene {
       this.joystick.setDirection({ x: 0, y: 0 });
     });
 
-    if (this.launchData.roomId && this.launchData.playerId && DEFAULT_SERVER_URL) {
+    if (
+      this.launchData.roomId &&
+      this.launchData.playerId &&
+      DEFAULT_SERVER_URL
+    ) {
       this.roomClient = new RoomClient({
         roomId: this.launchData.roomId,
         playerId: this.launchData.playerId,
@@ -794,9 +810,11 @@ export class GameScene extends Phaser.Scene {
       const position = this.toScreen(teammate.position);
       marker.setPosition(position.x, position.y);
     });
-    this.teammateMarkers.slice(this.state.players.length - 1).forEach((marker) => {
-      marker.setPosition(-9999, -9999);
-    });
+    this.teammateMarkers
+      .slice(this.state.players.length - 1)
+      .forEach((marker) => {
+        marker.setPosition(-9999, -9999);
+      });
 
     this.state.enemies.forEach((enemy, index) => {
       const marker = this.enemyMarkers[index];
@@ -810,11 +828,15 @@ export class GameScene extends Phaser.Scene {
 
     this.revealText?.setText(hudDisplay.revealText);
     this.scoreText?.setText(hudDisplay.scoreText);
-    this.statusText?.setText(hudDisplay.statusText).setColor(hudDisplay.statusColor);
+    this.statusText
+      ?.setText(hudDisplay.statusText)
+      .setColor(hudDisplay.statusColor);
     this.captureCountText?.setText(hudDisplay.captureText);
 
     if (!this.prefersReducedMotion) {
-      this.playHudFeedback(deriveHudFeedback(this.hudSnapshot, nextHudSnapshot));
+      this.playHudFeedback(
+        deriveHudFeedback(this.hudSnapshot, nextHudSnapshot),
+      );
     }
 
     this.hudSnapshot = nextHudSnapshot;
@@ -844,7 +866,9 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  private playHudFeedback(feedback: ReturnType<typeof deriveHudFeedback>): void {
+  private playHudFeedback(
+    feedback: ReturnType<typeof deriveHudFeedback>,
+  ): void {
     if (feedback.pulseReveal || feedback.captureCue) {
       this.pulseHudText(this.revealText, 1.08);
     }
