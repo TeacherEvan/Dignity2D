@@ -28,6 +28,11 @@ const ALLOWED_CORS_ORIGINS = new Set<string>([
   "http://localhost",
   "http://127.0.0.1",
   "https://dignity.example.com",
+  "https://dignity2-d.vercel.app",
+  "https://dignity2-d-git-main-teacher-evans-projects.vercel.app",
+  ...(process.env.ALLOWED_CORS_ORIGINS
+    ? process.env.ALLOWED_CORS_ORIGINS.split(",").map((o) => o.trim()).filter(Boolean)
+    : []),
 ]);
 
 function isAllowedCorsOrigin(origin: string | null | undefined): boolean {

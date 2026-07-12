@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: dignity-arcade-server
+    runtime: docker
+    dockerfilePath: server/Dockerfile
+    plan: starter
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 8787
+      - key: NODE_ENV
+        value: production
+      - key: ALLOWED_CORS_ORIGINS
+        sync: false
