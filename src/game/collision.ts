@@ -1,5 +1,5 @@
 import { cancelTrail } from "./capture/trailState";
-import type { GameState, Point } from "./types";
+import type { GameState, Point, ProjectileState } from "./types";
 
 function distanceToSegment(point: Point, a: Point, b: Point): number {
   const dx = b.x - a.x;
@@ -30,4 +30,18 @@ export function cancelTrailOnProjectileHit(
   playerId: string,
 ): GameState {
   return cancelTrail(state, playerId);
+}
+
+export function projectileHitsPoint(
+  projectile: ProjectileState,
+  point: Point,
+  pad = 2,
+): boolean {
+  return (
+    Math.hypot(
+      projectile.position.x - point.x,
+      projectile.position.y - point.y,
+    ) <=
+    projectile.radius + pad
+  );
 }

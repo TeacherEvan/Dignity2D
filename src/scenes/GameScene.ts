@@ -6,14 +6,24 @@ import { movePlayer } from "../game/capture/trailState";
 import {
   cancelTrailOnProjectileHit,
   circleHitsPolyline,
+  projectileHitsPoint,
 } from "../game/collision";
 import { createEnemyWave } from "../enemies/EnemySpawner";
-import { awardCaptureScore } from "../game/scoring";
+import { stepEnemies } from "../enemies/enemyStep";
+import {
+  awardCaptureScore,
+  comboMultiplier,
+  registerComboForPlayer,
+  resetComboForPlayer,
+} from "../game/scoring";
+import { damagePlayer } from "../game/player";
+import { spawnProjectile, stepProjectiles } from "../game/projectile";
 import {
   createInitialGameState,
   type EnemyState,
   type GameState,
   type Point,
+  type ProjectileState,
 } from "../game/types";
 import { VirtualJoystick } from "../input/VirtualJoystick";
 import {
@@ -22,6 +32,7 @@ import {
 } from "../render/RevealMask";
 import { getStandardLayout } from "../display/DeviceLayout";
 import { getTerritoryStage } from "../progression/territoryProgression";
+import { enemyColor, enemyGlyph } from "../theme/visuals";
 import type { GameLaunchData } from "../session";
 import { PALETTE } from "../theme/palette";
 import { getPendingLaunchData } from "../session";
@@ -45,7 +56,11 @@ export type GameSceneFrameInput = {
 };
 
 export type SceneDiagnosticEvent = {
-  name: "capture_committed" | "trail_cancelled" | "enemy_collision";
+  name:
+    | "capture_committed"
+    | "trail_cancelled"
+    | "enemy_collision"
+    | "game_over";
   payload: Record<string, string | number | boolean>;
 };
 
@@ -176,31 +191,6 @@ function clampPoint(
   };
 }
 
-function stepEnemies(
-  enemies: EnemyState[],
-  size: { width: number; height: number },
-  deltaMs: number,
-): EnemyState[] {
-  return enemies.map((enemy) => {
-    const nextPosition = {
-      x: enemy.position.x + enemy.velocity.x * (deltaMs / 1000),
-      y: enemy.position.y + enemy.velocity.y * (deltaMs / 1000),
-    };
-    let nextVelocity = enemy.velocity;
-    if (nextPosition.x <= 12 || nextPosition.x >= size.width - 12) {
-      nextVelocity = { ...nextVelocity, x: -nextVelocity.x };
-    }
-    if (nextPosition.y <= 12 || nextPosition.y >= size.height - 12) {
-      nextVelocity = { ...nextVelocity, y: -nextVelocity.y };
-    }
-    return {
-      ...enemy,
-      position: clampPoint(nextPosition, size),
-      velocity: nextVelocity,
-    };
-  });
-}
-
 export function createSceneGameState(levelId = "solo-default"): GameState {
   return createSceneGameStateForSize(levelId, BOARD_SIZE);
 }
@@ -277,11 +267,41 @@ export function advanceGameStateWithDiagnostics(
   if (!currentPlayer) {
     return { state, events };
   }
+  if (state.gameOver) {
+    return { state, events };
+  }
+
+  const activeTrailPoints = currentPlayer.activeTrail?.points ?? [];
+  const stepResult = stepEnemies(state.enemies, {
+    deltaMs: input.deltaMs,
+    now: input.now,
+    bounds: state.imageSize,
+    activeTrailPoints,
+    playerPositions: state.players.map((player) => player.position),
+    bothPlayersDrawing: state.players.every(
+      (player) => player.mode === "drawing",
+    ),
+  });
 
   let nextState: GameState = {
     ...state,
-    enemies: stepEnemies(state.enemies, state.imageSize, input.deltaMs),
+    enemies: stepResult.enemies,
   };
+
+  if (stepResult.newProjectiles.length > 0) {
+    const spawned = stepResult.newProjectiles.reduce<ProjectileState[]>(
+      (projectiles, shot) =>
+        spawnProjectile(projectiles, {
+          id: `proj-${input.now}-${shot.ownerEnemyId}-${projectiles.length}`,
+          ownerEnemyId: shot.ownerEnemyId,
+          position: shot.position,
+          velocity: shot.velocity,
+          radius: 5,
+        }),
+      nextState.projectiles,
+    );
+    nextState = { ...nextState, projectiles: spawned };
+  }
 
   const nextPosition = clampPoint(
     {
@@ -313,7 +333,12 @@ export function advanceGameStateWithDiagnostics(
     nextState = commitCaptureFromTrail(nextState, movedPlayer.activeTrail);
     if (nextState.captures.length > captureCount) {
       const captureArea = nextState.captures.at(-1)?.area ?? 0;
-      nextState = awardCaptureScore(nextState, playerId, captureArea);
+      nextState = awardCaptureScore(
+        nextState,
+        playerId,
+        captureArea,
+        movedPlayer.combo,
+      );
       events.push({
         name: "capture_committed",
         payload: { revealedRatio: nextState.revealedRatio },
@@ -331,11 +356,37 @@ export function advanceGameStateWithDiagnostics(
     );
   if (hitEnemy) {
     nextState = cancelTrailOnProjectileHit(nextState, playerId);
+    nextState = resetComboForPlayer(nextState, playerId);
     events.push({ name: "trail_cancelled", payload: {} });
     events.push({
       name: "enemy_collision",
       payload: { enemyKind: hitEnemy.kind },
     });
+  }
+
+  const steppedProjectiles = stepProjectiles(
+    nextState.projectiles,
+    input.deltaMs,
+    input.now,
+    state.imageSize,
+  );
+  const struck = steppedProjectiles.find((projectile) =>
+    projectileHitsPoint(projectile, movedPlayer.position, 8),
+  );
+  if (struck) {
+    const damaged = damagePlayer(nextState, playerId, input.now);
+    nextState = damaged.state;
+    if (damaged.lostLife) {
+      events.push({
+        name: "enemy_collision",
+        payload: { enemyKind: struck.ownerEnemyId, lifeLost: true },
+      });
+      if (damaged.gameOver) {
+        events.push({ name: "game_over", payload: {} });
+      }
+    }
+  } else {
+    nextState = { ...nextState, projectiles: steppedProjectiles };
   }
 
   return { state: nextState, events };
@@ -516,6 +567,20 @@ export class GameScene extends Phaser.Scene {
   private prefersReducedMotion = false;
   private performanceFallbackLogged = false;
 
+  private background?: Phaser.GameObjects.RenderTexture;
+  private sweep?: Phaser.GameObjects.Graphics;
+  private enemyGlowMarkers: Phaser.GameObjects.Arc[] = [];
+  private enemyGlyphTexts: Phaser.GameObjects.Text[] = [];
+  private projectileMarkers: Phaser.GameObjects.Arc[] = [];
+  private projectileGlowMarkers: Phaser.GameObjects.Arc[] = [];
+  private playerGlow?: Phaser.GameObjects.Arc;
+  private livesText?: Phaser.GameObjects.Text;
+  private comboText?: Phaser.GameObjects.Text;
+  private enemyTagTexts: Phaser.GameObjects.Text[] = [];
+  private overlayPanel?: Phaser.GameObjects.Rectangle;
+  private overlayText?: Phaser.GameObjects.Text;
+  private overlayShown: "" | "win" | "lose" = "";
+
   constructor() {
     super("GameScene");
   }
@@ -554,6 +619,8 @@ export class GameScene extends Phaser.Scene {
     );
     this.boardOrigin = layoutMetrics.boardOrigin;
     const boardSize = this.state.imageSize;
+
+    this.drawBackground(layoutMetrics, boardSize);
 
     this.add
       .rectangle(
@@ -596,13 +663,73 @@ export class GameScene extends Phaser.Scene {
 
     this.captureGraphics = this.add.graphics();
     this.trailGraphics = this.add.graphics();
+    this.playerGlow = this.add.circle(0, 0, 18, PALETTE.CYAN, 0.18);
     this.playerMarker = this.add.circle(0, 0, 8, PALETTE.CYAN);
+    this.playerMarker.setStrokeStyle(2, PALETTE.WHITE, 0.9);
     this.teammateMarkers = this.state.players
       .slice(1)
       .map(() => this.add.circle(0, 0, 6, PALETTE.SAND));
     this.enemyMarkers = this.state.enemies.map(() =>
-      this.add.circle(0, 0, 10, PALETTE.AMBER),
+      this.add.circle(0, 0, 11, PALETTE.AMBER),
     );
+    this.enemyGlowMarkers = this.state.enemies.map(() =>
+      this.add.circle(0, 0, 22, PALETTE.AMBER, 0.16),
+    );
+    this.enemyGlyphTexts = this.state.enemies.map(() =>
+      this.add
+        .text(0, 0, "", {
+          color: PALETTE.css.WHITE,
+          fontFamily: '"Trebuchet MS", sans-serif',
+          fontSize: "14px",
+        })
+        .setOrigin(0.5),
+    );
+    this.projectileGlowMarkers = this.state.projectiles.map(() =>
+      this.add.circle(0, 0, 10, PALETTE.MAGENTA, 0.18),
+    );
+    this.projectileMarkers = this.state.projectiles.map(() =>
+      this.add.circle(0, 0, 4, PALETTE.MAGENTA),
+    );
+
+    this.livesText = this.add
+      .text(34, layoutMetrics.hudTop + 62, "", {
+        color: PALETTE.css.GOLD,
+        fontFamily: '"Trebuchet MS", sans-serif',
+        fontSize: "15px",
+      })
+      .setOrigin(0, 0.5);
+    this.comboText = this.add
+      .text(this.scale.width - 48, layoutMetrics.hudTop + 58, "", {
+        color: PALETTE.css.MAGENTA,
+        fontFamily: '"Trebuchet MS", sans-serif',
+        fontSize: "13px",
+      })
+      .setOrigin(0.5, 0.5);
+
+    this.overlayPanel = this.add
+      .rectangle(
+        this.boardOrigin.x + boardSize.width / 2,
+        this.boardOrigin.y + boardSize.height / 2,
+        boardSize.width,
+        boardSize.height,
+        PALETTE.VOID,
+        0.72,
+      )
+      .setVisible(false);
+    this.overlayText = this.add
+      .text(
+        this.boardOrigin.x + boardSize.width / 2,
+        this.boardOrigin.y + boardSize.height / 2,
+        "",
+        {
+          color: PALETTE.css.GOLD,
+          fontFamily: '"Palatino Linotype", Georgia, serif',
+          fontSize: "26px",
+          align: "center",
+        },
+      )
+      .setOrigin(0.5)
+      .setVisible(false);
 
     this.hudChrome = this.add.graphics();
     this.hudSignal = this.add.graphics();
@@ -619,12 +746,12 @@ export class GameScene extends Phaser.Scene {
       },
     );
     this.scoreText = this.add
-      .text(214, layoutMetrics.hudTop + 16, "Score 0", {
+      .text(238, layoutMetrics.hudTop + 16, "Score 0", {
         color: PALETTE.css.GOLD,
         fontFamily: '"Trebuchet MS", sans-serif',
         fontSize: "16px",
       })
-      .setOrigin(1, 0);
+      .setOrigin(0, 0);
     this.statusText = this.add.text(
       34,
       layoutMetrics.hudTop + 40,
@@ -686,6 +813,11 @@ export class GameScene extends Phaser.Scene {
             this.renderState();
           }
         },
+        onError: (error) => {
+          this.launchData.diagnostics?.track("room_connection_error", {
+            message: error.message,
+          });
+        },
       });
       this.roomClient.connect();
       this.events.once("shutdown", () => {
@@ -733,6 +865,7 @@ export class GameScene extends Phaser.Scene {
       this.roomClient.sendInputFrame(direction, this.inputSequence);
     }
     this.renderState();
+    this.animateBackground(delta);
   }
 
   private getKeyboardDirection(): Point {
@@ -766,8 +899,11 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.captureGraphics.clear();
-    this.captureGraphics.fillStyle(PALETTE.CYAN, 0.18);
-    this.captureGraphics.lineStyle(2, PALETTE.CYAN, 0.7);
+    const shimmer = this.prefersReducedMotion
+      ? 0.7
+      : 0.5 + 0.25 * Math.sin(this.time.now / 280);
+    this.captureGraphics.fillStyle(PALETTE.CYAN, 0.16);
+    this.captureGraphics.lineStyle(2, PALETTE.CYAN, shimmer);
     for (const capture of this.state.captures) {
       const points = capture.polygon.map((point) => this.toScreen(point));
       this.captureGraphics.beginPath();
@@ -781,7 +917,21 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.trailGraphics.clear();
-    this.trailGraphics.lineStyle(4, PALETTE.GOLD, 0.9);
+    if (!this.prefersReducedMotion) {
+      this.trailGraphics.lineStyle(9, PALETTE.GOLD, 0.18);
+      const glowTrail = player.activeTrail?.points ?? [];
+      if (glowTrail.length > 1) {
+        this.trailGraphics.beginPath();
+        const gFirst = this.toScreen(glowTrail[0]!);
+        this.trailGraphics.moveTo(gFirst.x, gFirst.y);
+        for (let index = 1; index < glowTrail.length; index += 1) {
+          const point = this.toScreen(glowTrail[index]!);
+          this.trailGraphics.lineTo(point.x, point.y);
+        }
+        this.trailGraphics.strokePath();
+      }
+    }
+    this.trailGraphics.lineStyle(3, PALETTE.GOLD, 0.95);
     const trail = player.activeTrail?.points ?? [];
     if (trail.length > 1) {
       this.trailGraphics.beginPath();
@@ -792,10 +942,16 @@ export class GameScene extends Phaser.Scene {
         this.trailGraphics.lineTo(point.x, point.y);
       }
       this.trailGraphics.strokePath();
+      const tip = this.toScreen(trail[trail.length - 1]!);
+      this.trailGraphics.fillStyle(PALETTE.WHITE, 0.9);
+      this.trailGraphics.fillCircle(tip.x, tip.y, 4);
     }
 
     const playerPosition = this.toScreen(player.position);
     this.playerMarker.setPosition(playerPosition.x, playerPosition.y);
+    this.playerGlow?.setPosition(playerPosition.x, playerPosition.y);
+    const invuln = this.time.now < player.invulnUntil;
+    this.playerMarker.setAlpha(invuln && !this.prefersReducedMotion ? 0.45 : 1);
 
     while (this.teammateMarkers.length < this.state.players.length - 1) {
       this.teammateMarkers.push(this.add.circle(0, 0, 6, PALETTE.SAND));
@@ -816,12 +972,56 @@ export class GameScene extends Phaser.Scene {
         marker.setPosition(-9999, -9999);
       });
 
+    while (this.enemyMarkers.length < this.state.enemies.length) {
+      this.enemyMarkers.push(this.add.circle(0, 0, 11, PALETTE.AMBER));
+      this.enemyGlowMarkers.push(
+        this.add.circle(0, 0, 22, PALETTE.AMBER, 0.16),
+      );
+      this.enemyGlyphTexts.push(
+        this.add
+          .text(0, 0, "", {
+            color: PALETTE.css.WHITE,
+            fontFamily: '"Trebuchet MS", sans-serif',
+            fontSize: "14px",
+          })
+          .setOrigin(0.5),
+      );
+    }
     this.state.enemies.forEach((enemy, index) => {
       const marker = this.enemyMarkers[index];
+      const glow = this.enemyGlowMarkers[index];
+      const glyph = this.enemyGlyphTexts[index];
       if (!marker) return;
       const position = this.toScreen(enemy.position);
-      marker.setPosition(position.x, position.y);
+      const color = enemyColor(enemy.kind);
+      marker.setPosition(position.x, position.y).setFillStyle(color, 1);
+      glow?.setPosition(position.x, position.y).setFillStyle(color, 0.16);
+      glyph
+        ?.setPosition(position.x, position.y)
+        .setText(enemyGlyph(enemy.kind))
+        .setColor(PALETTE.css.WHITE);
     });
+
+    while (this.projectileMarkers.length < this.state.projectiles.length) {
+      this.projectileGlowMarkers.push(
+        this.add.circle(0, 0, 10, PALETTE.MAGENTA, 0.18),
+      );
+      this.projectileMarkers.push(this.add.circle(0, 0, 4, PALETTE.MAGENTA));
+    }
+    this.state.projectiles.forEach((projectile, index) => {
+      const marker = this.projectileMarkers[index];
+      const glow = this.projectileGlowMarkers[index];
+      if (!marker) return;
+      const position = this.toScreen(projectile.position);
+      marker.setPosition(position.x, position.y);
+      glow?.setPosition(position.x, position.y);
+    });
+    this.projectileMarkers
+      .slice(this.state.projectiles.length)
+      .forEach((marker) => marker.setPosition(-9999, -9999));
+    this.projectileGlowMarkers
+      .slice(this.state.projectiles.length)
+      .forEach((marker) => marker.setPosition(-9999, -9999));
 
     const nextHudSnapshot = makeHudSnapshot(this.state, this.launchData);
     const hudDisplay = makeHudDisplayModel(nextHudSnapshot);
@@ -833,6 +1033,13 @@ export class GameScene extends Phaser.Scene {
       .setColor(hudDisplay.statusColor);
     this.captureCountText?.setText(hudDisplay.captureText);
 
+    const lives = player.lives;
+    this.livesText?.setText("◆".repeat(Math.max(0, lives)) || "—");
+    const combo = player.combo;
+    this.comboText?.setText(combo > 1 ? `x${combo} COMBO` : "");
+
+    this.renderOverlay();
+
     if (!this.prefersReducedMotion) {
       this.playHudFeedback(
         deriveHudFeedback(this.hudSnapshot, nextHudSnapshot),
@@ -840,6 +1047,91 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.hudSnapshot = nextHudSnapshot;
+  }
+
+  private drawBackground(
+    _layoutMetrics: SceneLayoutMetrics,
+    boardSize: { width: number; height: number },
+  ): void {
+    const origin = this.boardOrigin;
+    const rt = this.add.renderTexture(
+      origin.x,
+      origin.y,
+      boardSize.width,
+      boardSize.height,
+    );
+    rt.setOrigin(0, 0).setDepth(-5);
+
+    const grid = this.add.graphics();
+    grid.lineStyle(1, PALETTE.GOLD, 0.08);
+    const step = 24;
+    for (let x = step; x < boardSize.width; x += step) {
+      grid.lineBetween(x, 0, x, boardSize.height);
+    }
+    for (let y = step; y < boardSize.height; y += step) {
+      grid.lineBetween(0, y, boardSize.width, y);
+    }
+    const vignette = this.add.graphics();
+    vignette.fillStyle(PALETTE.BORDER, 0.35);
+    vignette.fillRect(0, 0, boardSize.width, 6);
+    vignette.fillRect(0, boardSize.height - 6, boardSize.width, 6);
+
+    rt.draw(grid, 0, 0);
+    rt.draw(vignette, 0, 0);
+    grid.destroy();
+    vignette.destroy();
+
+    this.background = rt;
+    this.sweep = this.add.graphics().setDepth(-4);
+  }
+
+  private animateBackground(delta: number): void {
+    if (!this.sweep || this.prefersReducedMotion) return;
+    const size = this.state.imageSize;
+    const phase = (this.time.now / 2600) % 1;
+    const y = phase * size.height;
+    this.sweep.clear();
+    this.sweep.lineStyle(2, PALETTE.CYAN, 0.16);
+    this.sweep.lineBetween(
+      this.boardOrigin.x,
+      this.boardOrigin.y + y,
+      this.boardOrigin.x + size.width,
+      this.boardOrigin.y + y,
+    );
+  }
+
+  private renderOverlay(): void {
+    if (this.state.won && this.overlayShown !== "win") {
+      this.overlayShown = "win";
+      this.overlayPanel?.setVisible(true);
+      this.overlayText
+        ?.setText("IMAGE SECURED")
+        .setColor(PALETTE.css.GOLD)
+        .setVisible(true);
+      if (!this.prefersReducedMotion) {
+        this.tweens.add({
+          targets: this.overlayText,
+          scale: { from: 0.7, to: 1 },
+          duration: 420,
+          ease: "Back.Out",
+        });
+      }
+    } else if (this.state.gameOver && this.overlayShown !== "lose") {
+      this.overlayShown = "lose";
+      this.overlayPanel?.setVisible(true);
+      this.overlayText
+        ?.setText("SIGNAL LOST")
+        .setColor(PALETTE.css.MAGENTA)
+        .setVisible(true);
+      if (!this.prefersReducedMotion) {
+        this.tweens.add({
+          targets: this.overlayText,
+          alpha: { from: 0.2, to: 1 },
+          duration: 500,
+          ease: "Cubic.Out",
+        });
+      }
+    }
   }
 
   private playHudEntrance(): void {

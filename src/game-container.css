@@ -1,0 +1,24 @@
+/* Keep the Phaser canvas pinned to the viewport so it is never pushed
+   below the launcher in document flow. */
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #0a0812;
+}
+
+#game-container {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  overflow: hidden;
+}
+
+#app-shell {
+  position: relative;
+  z-index: 1;
+}

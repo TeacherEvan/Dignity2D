@@ -20,12 +20,14 @@ describe("scoring", () => {
       dangerMultiplier: 1,
       streak: 0,
       coOpBonus: 0,
+      combo: 0,
     });
     const large = calculateCaptureScore({
       area: 100,
       dangerMultiplier: 2,
       streak: 2,
       coOpBonus: 50,
+      combo: 0,
     });
     expect(large).toBeGreaterThan(small);
   });

@@ -20,7 +20,10 @@ export type PlayerState = {
   lastSafePosition: Point;
   mode: PlayerMode;
   health: number;
+  lives: number;
+  invulnUntil: number;
   score: number;
+  combo: number;
   activeTrail: Trail | null;
 };
 
@@ -37,6 +40,8 @@ export type ProjectileState = {
   position: Point;
   velocity: Point;
   radius: number;
+  bornAt: number;
+  ttl: number;
 };
 
 export type GameState = {
@@ -48,6 +53,7 @@ export type GameState = {
   enemies: EnemyState[];
   projectiles: ProjectileState[];
   won: boolean;
+  gameOver: boolean;
 };
 
 export function createInitialGameState(
@@ -67,7 +73,10 @@ export function createInitialGameState(
         lastSafePosition: start,
         mode: "safe",
         health: 3,
+        lives: 3,
+        invulnUntil: 0,
         score: 0,
+        combo: 0,
         activeTrail: null,
       },
     ],
@@ -75,5 +84,6 @@ export function createInitialGameState(
     enemies: [],
     projectiles: [],
     won: false,
+    gameOver: false,
   };
 }
