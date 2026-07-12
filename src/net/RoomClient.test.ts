@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ServerMessage } from "../../shared/protocol";
 import {
   RoomClient,
@@ -47,6 +47,11 @@ class MockWebSocket {
 describe("RoomClient", () => {
   beforeEach(() => {
     MockWebSocket.instances = [];
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("interpolates teammate movement", () => {
@@ -156,5 +161,84 @@ describe("RoomClient", () => {
     expect(onError).toHaveBeenCalledWith(
       new Error("Malformed server message."),
     );
+  });
+
+  it("reconnects with backoff when the socket closes unexpectedly", () => {
+    const onError = vi.fn<(error: Error) => void>();
+    const client = new RoomClient({
+      roomId: "room-1",
+      playerId: "p1",
+      serverUrl: "http://example.test",
+      WebSocketImpl: MockWebSocket as never,
+      onError,
+      maxReconnectAttempts: 3,
+    });
+
+    client.connect();
+    const first = MockWebSocket.instances[0]!;
+    first.emit("open");
+    expect(first.sent).toEqual([
+      JSON.stringify({ type: "reconnect", roomId: "room-1", playerId: "p1" }),
+    ]);
+
+    // Simulate an unexpected drop.
+    first.emit("close");
+    expect(MockWebSocket.instances).toHaveLength(1);
+
+    // First reconnect attempt fires after 1000ms backoff.
+    vi.advanceTimersByTime(1000);
+    const second = MockWebSocket.instances[1];
+    expect(second).toBeDefined();
+    second.emit("open");
+    expect(second.sent).toEqual([
+      JSON.stringify({ type: "reconnect", roomId: "room-1", playerId: "p1" }),
+    ]);
+
+    client.close();
+    expect(onError).not.toHaveBeenCalled();
+  });
+
+  it("gives up after exceeding max reconnect attempts and reports the loss", () => {
+    const onError = vi.fn<(error: Error) => void>();
+    const client = new RoomClient({
+      roomId: "room-1",
+      playerId: "p1",
+      serverUrl: "http://example.test",
+      WebSocketImpl: MockWebSocket as never,
+      onError,
+      maxReconnectAttempts: 2,
+    });
+
+    client.connect();
+    const first = MockWebSocket.instances[0]!;
+    first.emit("open");
+    first.emit("close");
+
+    vi.advanceTimersByTime(1000);
+    MockWebSocket.instances[1]!.emit("close");
+    vi.advanceTimersByTime(2000);
+    MockWebSocket.instances[2]!.emit("close");
+    vi.advanceTimersByTime(4000);
+
+    expect(onError).toHaveBeenCalledWith(new Error("Room connection lost."));
+    expect(MockWebSocket.instances).toHaveLength(3);
+  });
+
+  it("does not reconnect when closed by the user", () => {
+    const client = new RoomClient({
+      roomId: "room-1",
+      playerId: "p1",
+      serverUrl: "http://example.test",
+      WebSocketImpl: MockWebSocket as never,
+    });
+
+    client.connect();
+    const first = MockWebSocket.instances[0]!;
+    first.emit("open");
+    client.close();
+    first.emit("close");
+
+    vi.advanceTimersByTime(10000);
+    expect(MockWebSocket.instances).toHaveLength(1);
   });
 });

@@ -215,7 +215,53 @@ describe("server entrypoint", () => {
     });
   });
 
-  it("closes the websocket when cumulative frame size exceeds the limit", async () => {
+  it("keeps a connection open across many small frames (per-message, not cumulative limit)", async () => {
+    const app = createAppServer();
+    activeServers.push(app);
+    await app.listen();
+
+    // Create a real room so reconnect frames resolve to state-sync.
+    const roomResponse = await fetch(`${app.getUrl()}/rooms`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ imageId: "per-msg-img" }),
+    });
+    const room = (await roomResponse.json()) as { roomId: string };
+
+    const outcome = await new Promise<{
+      closed: boolean;
+      lastSync: { type: string } | undefined;
+    }>((resolve, reject) => {
+      const socket = new WebSocket(app.getUrl().replace("http", "ws"));
+      const seen: Array<{ type: string }> = [];
+      socket.once("open", () => {
+        // Many small reconnect frames must NOT trip a cumulative byte cap.
+        for (let index = 0; index < 5000; index += 1) {
+          socket.send(
+            JSON.stringify({
+              type: "reconnect",
+              roomId: room.roomId,
+              playerId: "p1",
+            }),
+          );
+        }
+      });
+      socket.on("message", (message) => {
+        seen.push(JSON.parse(message.toString()) as { type: string });
+        if (seen.length >= 5000) {
+          socket.close();
+          resolve({ closed: true, lastSync: seen[seen.length - 1] });
+        }
+      });
+      socket.once("error", reject);
+    });
+
+    expect(outcome.closed).toBe(true);
+    // All 5000 frames were processed; none triggered a size-limit kill.
+    expect(outcome.lastSync?.type).toBe("state-sync");
+  });
+
+  it("closes the websocket when a single message exceeds the per-message limit", async () => {
     const app = createAppServer();
     activeServers.push(app);
     await app.listen();
@@ -227,13 +273,14 @@ describe("server entrypoint", () => {
       const socket = new WebSocket(app.getUrl().replace("http", "ws"));
       let error: { type: string; message?: string } | undefined;
       socket.once("open", () => {
-        // Send many valid reconnect frames; each is small but cumulative bytes
-        // cross the 64 KiB cap, exercising the per-connection size guard.
-        for (let index = 0; index < 5000; index += 1) {
-          socket.send(
-            JSON.stringify({ type: "reconnect", roomId: "x", playerId: "p1" }),
-          );
-        }
+        // A single oversized message (well above 64 KiB) must be rejected.
+        socket.send(
+          JSON.stringify({
+            type: "reconnect",
+            roomId: "x".repeat(200_000),
+            playerId: "p1",
+          }),
+        );
       });
       socket.on("message", (message) => {
         error = JSON.parse(message.toString()) as {
@@ -250,5 +297,52 @@ describe("server entrypoint", () => {
       type: "error",
       message: "Message size limit exceeded.",
     });
+  });
+
+  it("reflects a localhost origin instead of wildcard CORS", async () => {
+    const app = createAppServer();
+    activeServers.push(app);
+    await app.listen();
+
+    const response = await fetch(`${app.getUrl()}/health`, {
+      headers: { origin: "http://localhost:4173" },
+    });
+    expect(response.headers.get("access-control-allow-origin")).toBe(
+      "http://localhost:4173",
+    );
+    expect(response.headers.get("vary")).toContain("origin");
+  });
+
+  it("reflects a configured server origin and omits allow-origin for unknown origins", async () => {
+    const app = createAppServer();
+    activeServers.push(app);
+    await app.listen();
+
+    const good = await fetch(`${app.getUrl()}/health`, {
+      headers: { origin: "https://dignity.example.com" },
+    });
+    expect(good.headers.get("access-control-allow-origin")).toBe(
+      "https://dignity.example.com",
+    );
+
+    const unknown = await fetch(`${app.getUrl()}/health`, {
+      headers: { origin: "https://evil.example.com" },
+    });
+    expect(unknown.headers.get("access-control-allow-origin")).toBeNull();
+  });
+
+  it("answers CORS preflight (OPTIONS) with reflected origin", async () => {
+    const app = createAppServer();
+    activeServers.push(app);
+    await app.listen();
+
+    const response = await fetch(`${app.getUrl()}/health`, {
+      method: "OPTIONS",
+      headers: { origin: "http://127.0.0.1:4173" },
+    });
+    expect(response.status).toBe(204);
+    expect(response.headers.get("access-control-allow-origin")).toBe(
+      "http://127.0.0.1:4173",
+    );
   });
 });

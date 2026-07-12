@@ -24,11 +24,46 @@ type JsonValue = Record<string, unknown>;
 const MAX_JSON_BYTES = 8 * 1024;
 const MAX_WS_MESSAGE_BYTES = 64 * 1024;
 
-const CORS_HEADERS = {
-  "access-control-allow-origin": "*",
-  "access-control-allow-methods": "GET,POST,OPTIONS",
-  "access-control-allow-headers": "content-type",
-} as const;
+const ALLOWED_CORS_ORIGINS = new Set<string>([
+  "http://localhost",
+  "http://127.0.0.1",
+  "https://dignity.example.com",
+]);
+
+function isAllowedCorsOrigin(origin: string | null | undefined): boolean {
+  if (!origin) return false;
+  try {
+    const parsed = new URL(origin);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return false;
+    }
+    if (ALLOWED_CORS_ORIGINS.has(origin)) return true;
+    // Match any localhost / 127.0.0.1 origin on any port (local dev).
+    return parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1";
+  } catch {
+    return false;
+  }
+}
+
+function resolveCorsHeaders(request: IncomingMessage): Record<string, string> {
+  const origin = request.headers.origin ?? null;
+  if (!isAllowedCorsOrigin(origin)) {
+    return {};
+  }
+  return {
+    "access-control-allow-origin": origin as string,
+    "access-control-allow-methods": "GET,POST,OPTIONS",
+    "access-control-allow-headers": "content-type",
+    Vary: "origin",
+  };
+}
+
+function withCors(
+  request: IncomingMessage,
+  headers: Record<string, string>,
+): Record<string, string> {
+  return { ...resolveCorsHeaders(request), ...headers };
+}
 
 export type AppServer = {
   roomManager: RoomManager;
@@ -69,12 +104,13 @@ function buildImageMetadata(
 }
 
 function writeJson(
+  request: IncomingMessage,
   response: ServerResponse,
   statusCode: number,
   body: JsonValue,
 ): void {
   response.writeHead(statusCode, {
-    ...CORS_HEADERS,
+    ...withCors(request, {}),
     "content-type": "application/json",
   });
   response.end(JSON.stringify(body));
@@ -146,13 +182,13 @@ export function createAppServer(): AppServer {
 
     try {
       if (request.method === "OPTIONS") {
-        response.writeHead(204, CORS_HEADERS);
+        response.writeHead(204, resolveCorsHeaders(request));
         response.end();
         return;
       }
 
       if (request.method === "GET" && requestUrl.pathname === "/health") {
-        writeJson(response, 200, { ok: true, rooms: 0 });
+        writeJson(request, response, 200, { ok: true, rooms: 0 });
         return;
       }
 
@@ -164,14 +200,15 @@ export function createAppServer(): AppServer {
         const token = requestUrl.searchParams.get("token") ?? "";
         const stored = imageStore.getAuthorized(imageId, token);
         if (!stored) {
-          writeJson(response, 404, { error: "Image not found." });
+          writeJson(request, response, 404, { error: "Image not found." });
           return;
         }
         response.writeHead(200, {
-          ...CORS_HEADERS,
-          "content-type": stored.contentType,
-          "cache-control": "private, max-age=0, must-revalidate",
-          "content-length": stored.bytes,
+          ...withCors(request, {
+            "content-type": stored.contentType,
+            "cache-control": "private, max-age=0, must-revalidate",
+            "content-length": String(stored.bytes),
+          }),
         });
         response.end(stored.buffer);
         return;
@@ -183,7 +220,7 @@ export function createAppServer(): AppServer {
           typeof body.imageId === "string" ? body.imageId : "default-image";
         const room = roomManager.createRoom(imageId);
         const image = buildImageMetadata(imageStore, room.imageId);
-        writeJson(response, 201, {
+        writeJson(request, response, 201, {
           roomId: room.id,
           playerId: room.players[0]?.id ?? null,
           playerCount: room.players.length,
@@ -197,11 +234,13 @@ export function createAppServer(): AppServer {
         const roomId = typeof body.roomId === "string" ? body.roomId : "";
         const room = roomManager.joinRoom(roomId);
         if (!room) {
-          writeJson(response, 404, { error: "Room not found or full." });
+          writeJson(request, response, 404, {
+            error: "Room not found or full.",
+          });
           return;
         }
         const image = buildImageMetadata(imageStore, room.imageId);
-        writeJson(response, 200, {
+        writeJson(request, response, 200, {
           roomId: room.id,
           playerId: room.players[room.players.length - 1]?.id ?? null,
           playerCount: room.players.length,
@@ -221,7 +260,7 @@ export function createAppServer(): AppServer {
           "Upload exceeds server size limit.",
         );
         if (source.length === 0) {
-          writeJson(response, 400, { error: "Upload body is empty." });
+          writeJson(request, response, 400, { error: "Upload body is empty." });
           return;
         }
 
@@ -229,14 +268,14 @@ export function createAppServer(): AppServer {
         try {
           output = await transformImage(source, policy);
         } catch {
-          writeJson(response, 400, {
+          writeJson(request, response, 400, {
             error: "Upload image could not be processed.",
           });
           return;
         }
 
         const stored = imageStore.save(output, retention);
-        writeJson(response, 200, {
+        writeJson(request, response, 200, {
           imageId: stored.id,
           imagePath: buildSignedImagePath(stored.id, stored.accessToken),
           retention,
@@ -245,20 +284,22 @@ export function createAppServer(): AppServer {
         return;
       }
 
-      writeJson(response, 404, { error: "Not found." });
+      writeJson(request, response, 404, { error: "Not found." });
     } catch (error) {
       if (error instanceof RequestTooLargeError) {
-        writeJson(response, 413, { error: error.clientMessage });
+        writeJson(request, response, 413, { error: error.clientMessage });
         return;
       }
-      writeJson(response, 500, { error: "Internal server error." });
+      writeJson(request, response, 500, { error: "Internal server error." });
     }
   });
 
   const webSocketServer = new WebSocketServer({ server: httpServer });
   webSocketServer.on("connection", (socket) => {
-    let receivedBytes = 0;
     socket.on("message", (message) => {
+      // Guard on the size of THIS message only. The previous cumulative
+      // counter killed healthy connections after ~64 KiB of normal traffic
+      // (every input-frame adds bytes), which froze networked games.
       const frameBytes =
         typeof message === "string"
           ? Buffer.byteLength(message)
@@ -270,9 +311,8 @@ export function createAppServer(): AppServer {
                   (total, chunk) => total + chunk.length,
                   0,
                 );
-      receivedBytes += frameBytes;
 
-      if (receivedBytes > MAX_WS_MESSAGE_BYTES) {
+      if (frameBytes > MAX_WS_MESSAGE_BYTES) {
         sendSocketMessage(socket, {
           type: "error",
           message: "Message size limit exceeded.",
