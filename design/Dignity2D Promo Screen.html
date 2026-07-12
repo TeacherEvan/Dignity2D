@@ -1,421 +1,670 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dignity 2D — Promotional Screen</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
-<style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dignity 2D — Promotional Screen</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=Share+Tech+Mono&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
 
-:root {
-  --void:    #0A0812;
-  --border:  #1A1428;
-  --gold:    #FFD700;
-  --cyan:    #00FFFF;
-  --amber:   #FF8C00;
-  --magenta: #FF00CC;
-  --sand:    #C8A96E;
-  --white:   #FFFFFF;
-}
+      :root {
+        --void: #0a0812;
+        --border: #1a1428;
+        --gold: #ffd700;
+        --cyan: #00ffff;
+        --amber: #ff8c00;
+        --magenta: #ff00cc;
+        --sand: #c8a96e;
+        --white: #ffffff;
+      }
 
-html, body {
-  width: 100%; height: 100%;
-  background: var(--void);
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  font-family: 'Share Tech Mono', monospace;
-}
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        background: var(--void);
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        font-family: "Share Tech Mono", monospace;
+      }
 
-/* ── Artboard: 390×844 (iPhone 14 Pro viewport) ── */
-.artboard {
-  position: relative;
-  width: 390px;
-  min-height: 844px;
-  background: var(--void);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
+      /* ── Artboard: 390×844 (iPhone 14 Pro viewport) ── */
+      .artboard {
+        position: relative;
+        width: 390px;
+        min-height: 844px;
+        background: var(--void);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
 
-/* ── Scanlines overlay ── */
-.artboard::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 2px,
-    rgba(0,0,0,0.18) 2px,
-    rgba(0,0,0,0.18) 4px
-  );
-  pointer-events: none;
-  z-index: 100;
-}
+      /* ── Scanlines overlay ── */
+      .artboard::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 2px,
+          rgba(0, 0, 0, 0.18) 2px,
+          rgba(0, 0, 0, 0.18) 4px
+        );
+        pointer-events: none;
+        z-index: 100;
+      }
 
-/* ─────────────────────────────────────
+      /* ─────────────────────────────────────
    HERO SECTION
 ───────────────────────────────────── */
-.hero {
-  position: relative;
-  height: 340px;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  align-items: center;
-  padding-bottom: 36px;
-  overflow: hidden;
-}
+      .hero {
+        position: relative;
+        height: 340px;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        align-items: center;
+        padding-bottom: 36px;
+        overflow: hidden;
+      }
 
-.hero-bg {
-  position: absolute;
-  inset: 0;
-  background-image: url('data:image/jpeg;base64,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');
-  background-size: cover;
-  background-position: center top;
-  filter: brightness(0.28) saturate(0.6);
-  z-index: 0;
-}
+      .hero-bg {
+        position: absolute;
+        inset: 0;
+        background-image: url("data:image/jpeg;base64,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");
+        background-size: cover;
+        background-position: center top;
+        filter: brightness(0.28) saturate(0.6);
+        z-index: 0;
+      }
 
-/* gradient fade to void at bottom */
-.hero-bg::after {
-  content: '';
-  position: absolute;
-  bottom: 0; left: 0; right: 0;
-  height: 120px;
-  background: linear-gradient(to bottom, transparent, var(--void));
-}
+      /* gradient fade to void at bottom */
+      .hero-bg::after {
+        content: "";
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 120px;
+        background: linear-gradient(to bottom, transparent, var(--void));
+      }
 
-.hero-content {
-  position: relative;
-  z-index: 2;
-  text-align: center;
-}
+      .hero-content {
+        position: relative;
+        z-index: 2;
+        text-align: center;
+      }
 
-.title-main {
-  font-family: 'Barlow Condensed', sans-serif;
-  font-weight: 900;
-  font-size: 84px;
-  line-height: 0.9;
-  letter-spacing: 0.04em;
-  color: var(--white);
-  text-transform: uppercase;
-  text-shadow:
-    0 0 30px rgba(255,215,0,0.35),
-    0 0 60px rgba(255,215,0,0.15);
-  animation: titlePulse 4s ease-in-out infinite;
-}
+      .title-main {
+        font-family: "Barlow Condensed", sans-serif;
+        font-weight: 900;
+        font-size: 84px;
+        line-height: 0.9;
+        letter-spacing: 0.04em;
+        color: var(--white);
+        text-transform: uppercase;
+        text-shadow:
+          0 0 30px rgba(255, 215, 0, 0.35),
+          0 0 60px rgba(255, 215, 0, 0.15);
+        animation: titlePulse 4s ease-in-out infinite;
+      }
 
-.title-tag {
-  display: inline-block;
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 14px;
-  letter-spacing: 0.2em;
-  color: var(--gold);
-  background: rgba(255,215,0,0.10);
-  border: 1px solid rgba(255,215,0,0.35);
-  padding: 3px 10px;
-  margin-top: 8px;
-  text-transform: uppercase;
-}
+      .title-tag {
+        display: inline-block;
+        font-family: "Share Tech Mono", monospace;
+        font-size: 14px;
+        letter-spacing: 0.2em;
+        color: var(--gold);
+        background: rgba(255, 215, 0, 0.1);
+        border: 1px solid rgba(255, 215, 0, 0.35);
+        padding: 3px 10px;
+        margin-top: 8px;
+        text-transform: uppercase;
+      }
 
-.tagline {
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 11px;
-  letter-spacing: 0.18em;
-  color: rgba(200,169,110,0.7);
-  text-transform: uppercase;
-  margin-top: 14px;
-}
+      .tagline {
+        font-family: "Share Tech Mono", monospace;
+        font-size: 11px;
+        letter-spacing: 0.18em;
+        color: rgba(200, 169, 110, 0.7);
+        text-transform: uppercase;
+        margin-top: 14px;
+      }
 
-@keyframes titlePulse {
-  0%, 100% { text-shadow: 0 0 30px rgba(255,215,0,0.35), 0 0 60px rgba(255,215,0,0.15); }
-  50%       { text-shadow: 0 0 50px rgba(255,215,0,0.6),  0 0 90px rgba(255,215,0,0.25); }
-}
+      @keyframes titlePulse {
+        0%,
+        100% {
+          text-shadow:
+            0 0 30px rgba(255, 215, 0, 0.35),
+            0 0 60px rgba(255, 215, 0, 0.15);
+        }
+        50% {
+          text-shadow:
+            0 0 50px rgba(255, 215, 0, 0.6),
+            0 0 90px rgba(255, 215, 0, 0.25);
+        }
+      }
 
-/* Glitch: two pseudo-elements slightly offset on hover/animation */
-.title-main {
-  position: relative;
-}
-.title-main::before,
-.title-main::after {
-  content: 'DIGNITY';
-  position: absolute;
-  left: 0; top: 0; width: 100%;
-  font-family: 'Barlow Condensed', sans-serif;
-  font-weight: 900;
-  font-size: 84px;
-  line-height: 0.9;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  overflow: hidden;
-}
-.title-main::before {
-  color: var(--cyan);
-  opacity: 0;
-  animation: glitch1 6s infinite;
-  clip-path: polygon(0 30%, 100% 30%, 100% 50%, 0 50%);
-}
-.title-main::after {
-  color: var(--magenta);
-  opacity: 0;
-  animation: glitch2 6s infinite;
-  clip-path: polygon(0 60%, 100% 60%, 100% 75%, 0 75%);
-}
+      /* Glitch: two pseudo-elements slightly offset on hover/animation */
+      .title-main {
+        position: relative;
+      }
+      .title-main::before,
+      .title-main::after {
+        content: "DIGNITY";
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        font-family: "Barlow Condensed", sans-serif;
+        font-weight: 900;
+        font-size: 84px;
+        line-height: 0.9;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        overflow: hidden;
+      }
+      .title-main::before {
+        color: var(--cyan);
+        opacity: 0;
+        animation: glitch1 6s infinite;
+        clip-path: polygon(0 30%, 100% 30%, 100% 50%, 0 50%);
+      }
+      .title-main::after {
+        color: var(--magenta);
+        opacity: 0;
+        animation: glitch2 6s infinite;
+        clip-path: polygon(0 60%, 100% 60%, 100% 75%, 0 75%);
+      }
 
-@keyframes glitch1 {
-  0%,89%,100%  { opacity: 0; transform: none; }
-  90%          { opacity: 0.7; transform: translateX(-3px); }
-  93%          { opacity: 0.7; transform: translateX(3px); }
-  96%          { opacity: 0; }
-}
-@keyframes glitch2 {
-  0%,87%,100%  { opacity: 0; transform: none; }
-  88%          { opacity: 0.5; transform: translateX(4px); }
-  92%          { opacity: 0.5; transform: translateX(-2px); }
-  95%          { opacity: 0; }
-}
+      @keyframes glitch1 {
+        0%,
+        89%,
+        100% {
+          opacity: 0;
+          transform: none;
+        }
+        90% {
+          opacity: 0.7;
+          transform: translateX(-3px);
+        }
+        93% {
+          opacity: 0.7;
+          transform: translateX(3px);
+        }
+        96% {
+          opacity: 0;
+        }
+      }
+      @keyframes glitch2 {
+        0%,
+        87%,
+        100% {
+          opacity: 0;
+          transform: none;
+        }
+        88% {
+          opacity: 0.5;
+          transform: translateX(4px);
+        }
+        92% {
+          opacity: 0.5;
+          transform: translateX(-2px);
+        }
+        95% {
+          opacity: 0;
+        }
+      }
 
-/* ─────────────────────────────────────
+      /* ─────────────────────────────────────
    SECTION LABEL
 ───────────────────────────────────── */
-.section-label {
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 10px;
-  letter-spacing: 0.3em;
-  color: rgba(200,169,110,0.45);
-  text-align: center;
-  text-transform: uppercase;
-  padding: 20px 0 14px;
-  border-top: 1px solid rgba(26,20,40,0.9);
-}
+      .section-label {
+        font-family: "Share Tech Mono", monospace;
+        font-size: 10px;
+        letter-spacing: 0.3em;
+        color: rgba(200, 169, 110, 0.45);
+        text-align: center;
+        text-transform: uppercase;
+        padding: 20px 0 14px;
+        border-top: 1px solid rgba(26, 20, 40, 0.9);
+      }
 
-/* ─────────────────────────────────────
+      /* ─────────────────────────────────────
    ENEMY GRID
 ───────────────────────────────────── */
-.enemy-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  padding: 0 20px 36px;
-  flex: 1;
-}
+      .enemy-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        padding: 0 20px 36px;
+        flex: 1;
+      }
 
-.enemy-card {
-  background: rgba(26,20,40,0.7);
-  border: 1px solid var(--card-color, rgba(255,255,255,0.1));
-  padding: 20px 16px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  position: relative;
-  overflow: hidden;
-  transition: border-color 0.2s;
-}
+      .enemy-card {
+        background: rgba(26, 20, 40, 0.7);
+        border: 1px solid var(--card-color, rgba(255, 255, 255, 0.1));
+        padding: 20px 16px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        position: relative;
+        overflow: hidden;
+        transition: border-color 0.2s;
+      }
 
-/* Corner mark */
-.enemy-card::before {
-  content: '';
-  position: absolute;
-  top: 0; right: 0;
-  width: 0; height: 0;
-  border-style: solid;
-  border-width: 0 18px 18px 0;
-  border-color: transparent var(--card-color, transparent) transparent transparent;
-  opacity: 0.6;
-}
+      /* Corner mark */
+      .enemy-card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 0;
+        height: 0;
+        border-style: solid;
+        border-width: 0 18px 18px 0;
+        border-color: transparent var(--card-color, transparent) transparent
+          transparent;
+        opacity: 0.6;
+      }
 
-/* Glow halo behind icon */
-.enemy-card::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle at 50% 42%, var(--card-color, transparent) 0%, transparent 60%);
-  opacity: 0;
-  animation: cardGlow 3.5s ease-in-out infinite;
-  animation-delay: var(--glow-delay, 0s);
-  pointer-events: none;
-}
+      /* Glow halo behind icon */
+      .enemy-card::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(
+          circle at 50% 42%,
+          var(--card-color, transparent) 0%,
+          transparent 60%
+        );
+        opacity: 0;
+        animation: cardGlow 3.5s ease-in-out infinite;
+        animation-delay: var(--glow-delay, 0s);
+        pointer-events: none;
+      }
 
-@keyframes cardGlow {
-  0%, 100% { opacity: 0; }
-  50%       { opacity: 0.07; }
-}
+      @keyframes cardGlow {
+        0%,
+        100% {
+          opacity: 0;
+        }
+        50% {
+          opacity: 0.07;
+        }
+      }
 
-/* ── Per-enemy colours ── */
-.enemy-card.chaser    { --card-color: var(--amber);   }
-.enemy-card.shooter   { --card-color: var(--magenta); }
-.enemy-card.orbiter   { --card-color: var(--cyan);    }
-.enemy-card.disruptor { --card-color: var(--gold);    }
+      /* ── Per-enemy colours ── */
+      .enemy-card.chaser {
+        --card-color: var(--amber);
+      }
+      .enemy-card.shooter {
+        --card-color: var(--magenta);
+      }
+      .enemy-card.orbiter {
+        --card-color: var(--cyan);
+      }
+      .enemy-card.disruptor {
+        --card-color: var(--gold);
+      }
 
-.enemy-card.chaser    { --glow-delay: 0s;    }
-.enemy-card.shooter   { --glow-delay: 0.9s;  }
-.enemy-card.orbiter   { --glow-delay: 1.8s;  }
-.enemy-card.disruptor { --glow-delay: 2.7s;  }
+      .enemy-card.chaser {
+        --glow-delay: 0s;
+      }
+      .enemy-card.shooter {
+        --glow-delay: 0.9s;
+      }
+      .enemy-card.orbiter {
+        --glow-delay: 1.8s;
+      }
+      .enemy-card.disruptor {
+        --glow-delay: 2.7s;
+      }
 
-/* ── Enemy Glyphs (SVG) ── */
-.enemy-glyph {
-  position: relative;
-  z-index: 1;
-}
+      /* ── Enemy Glyphs (SVG) ── */
+      .enemy-glyph {
+        position: relative;
+        z-index: 1;
+      }
 
-.enemy-name {
-  font-family: 'Barlow Condensed', sans-serif;
-  font-weight: 700;
-  font-size: 22px;
-  letter-spacing: 0.12em;
-  color: var(--card-color, var(--white));
-  text-transform: uppercase;
-  position: relative;
-  z-index: 1;
-  animation: namePulse 3.5s ease-in-out infinite;
-  animation-delay: var(--glow-delay, 0s);
-}
+      .enemy-name {
+        font-family: "Barlow Condensed", sans-serif;
+        font-weight: 700;
+        font-size: 22px;
+        letter-spacing: 0.12em;
+        color: var(--card-color, var(--white));
+        text-transform: uppercase;
+        position: relative;
+        z-index: 1;
+        animation: namePulse 3.5s ease-in-out infinite;
+        animation-delay: var(--glow-delay, 0s);
+      }
 
-@keyframes namePulse {
-  0%, 100% { opacity: 0.85; }
-  50%       { opacity: 1; text-shadow: 0 0 12px var(--card-color, transparent); }
-}
+      @keyframes namePulse {
+        0%,
+        100% {
+          opacity: 0.85;
+        }
+        50% {
+          opacity: 1;
+          text-shadow: 0 0 12px var(--card-color, transparent);
+        }
+      }
 
-.enemy-role {
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 9px;
-  letter-spacing: 0.18em;
-  color: rgba(200,169,110,0.55);
-  text-transform: uppercase;
-  text-align: center;
-  position: relative;
-  z-index: 1;
-  line-height: 1.5;
-}
+      .enemy-role {
+        font-family: "Share Tech Mono", monospace;
+        font-size: 9px;
+        letter-spacing: 0.18em;
+        color: rgba(200, 169, 110, 0.55);
+        text-transform: uppercase;
+        text-align: center;
+        position: relative;
+        z-index: 1;
+        line-height: 1.5;
+      }
 
-/* ─────────────────────────────────────
+      /* ─────────────────────────────────────
    FOOTER
 ───────────────────────────────────── */
-.footer {
-  text-align: center;
-  padding: 10px 0 24px;
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 9px;
-  letter-spacing: 0.22em;
-  color: rgba(200,169,110,0.25);
-  text-transform: uppercase;
-}
-</style>
-</head>
-<body>
-<div class="artboard">
-
-  <!-- ── Hero ── -->
-  <div class="hero">
-    <div class="hero-bg"></div>
-    <div class="hero-content">
-      <div class="title-main">DIGNITY</div>
-      <div class="title-tag">2D</div>
-      <div class="tagline">Claim the dark &middot; Survive it</div>
-    </div>
-  </div>
-
-  <div class="section-label">// enemies //</div>
-
-  <!-- ── Enemy Grid ── -->
-  <div class="enemy-grid">
-
-    <!-- CHASER -->
-    <div class="enemy-card chaser">
-      <div class="enemy-glyph">
-        <svg width="52" height="52" viewBox="0 0 52 52" fill="none">
-          <!-- Arrow/wedge pointing right — tracks your trail -->
-          <polygon points="8,10 44,26 8,42" fill="none" stroke="#FF8C00" stroke-width="2.5"/>
-          <polygon points="14,17 38,26 14,35" fill="#FF8C00" opacity="0.18"/>
-          <circle cx="44" cy="26" r="3" fill="#FF8C00" opacity="0.9"/>
-          <!-- speed ticks -->
-          <line x1="2" y1="16" x2="10" y2="16" stroke="#FF8C00" stroke-width="1.5" opacity="0.5"/>
-          <line x1="2" y1="26" x2="10" y2="26" stroke="#FF8C00" stroke-width="1.5" opacity="0.5"/>
-          <line x1="2" y1="36" x2="10" y2="36" stroke="#FF8C00" stroke-width="1.5" opacity="0.5"/>
-        </svg>
+      .footer {
+        text-align: center;
+        padding: 10px 0 24px;
+        font-family: "Share Tech Mono", monospace;
+        font-size: 9px;
+        letter-spacing: 0.22em;
+        color: rgba(200, 169, 110, 0.25);
+        text-transform: uppercase;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="artboard">
+      <!-- ── Hero ── -->
+      <div class="hero">
+        <div class="hero-bg"></div>
+        <div class="hero-content">
+          <div class="title-main">DIGNITY</div>
+          <div class="title-tag">2D</div>
+          <div class="tagline">Claim the dark &middot; Survive it</div>
+        </div>
       </div>
-      <div class="enemy-name">Chaser</div>
-      <div class="enemy-role">Hunts your trail<br>while you draw</div>
-    </div>
 
-    <!-- SHOOTER -->
-    <div class="enemy-card shooter">
-      <div class="enemy-glyph">
-        <svg width="52" height="52" viewBox="0 0 52 52" fill="none">
-          <!-- Crosshair reticle -->
-          <circle cx="26" cy="26" r="14" stroke="#FF00CC" stroke-width="2"/>
-          <circle cx="26" cy="26" r="5" fill="#FF00CC" opacity="0.25"/>
-          <circle cx="26" cy="26" r="2" fill="#FF00CC"/>
-          <!-- cross lines (outside the circle) -->
-          <line x1="26" y1="4"  x2="26" y2="12" stroke="#FF00CC" stroke-width="2"/>
-          <line x1="26" y1="40" x2="26" y2="48" stroke="#FF00CC" stroke-width="2"/>
-          <line x1="4"  y1="26" x2="12" y2="26" stroke="#FF00CC" stroke-width="2"/>
-          <line x1="40" y1="26" x2="48" y2="26" stroke="#FF00CC" stroke-width="2"/>
-          <!-- tick marks on circle -->
-          <line x1="26" y1="12" x2="26" y2="15" stroke="#FF00CC" stroke-width="1.5" opacity="0.6"/>
-          <line x1="26" y1="37" x2="26" y2="40" stroke="#FF00CC" stroke-width="1.5" opacity="0.6"/>
-        </svg>
+      <div class="section-label">// enemies //</div>
+
+      <!-- ── Enemy Grid ── -->
+      <div class="enemy-grid">
+        <!-- CHASER -->
+        <div class="enemy-card chaser">
+          <div class="enemy-glyph">
+            <svg width="52" height="52" viewBox="0 0 52 52" fill="none">
+              <!-- Arrow/wedge pointing right — tracks your trail -->
+              <polygon
+                points="8,10 44,26 8,42"
+                fill="none"
+                stroke="#FF8C00"
+                stroke-width="2.5"
+              />
+              <polygon
+                points="14,17 38,26 14,35"
+                fill="#FF8C00"
+                opacity="0.18"
+              />
+              <circle cx="44" cy="26" r="3" fill="#FF8C00" opacity="0.9" />
+              <!-- speed ticks -->
+              <line
+                x1="2"
+                y1="16"
+                x2="10"
+                y2="16"
+                stroke="#FF8C00"
+                stroke-width="1.5"
+                opacity="0.5"
+              />
+              <line
+                x1="2"
+                y1="26"
+                x2="10"
+                y2="26"
+                stroke="#FF8C00"
+                stroke-width="1.5"
+                opacity="0.5"
+              />
+              <line
+                x1="2"
+                y1="36"
+                x2="10"
+                y2="36"
+                stroke="#FF8C00"
+                stroke-width="1.5"
+                opacity="0.5"
+              />
+            </svg>
+          </div>
+          <div class="enemy-name">Chaser</div>
+          <div class="enemy-role">Hunts your trail<br />while you draw</div>
+        </div>
+
+        <!-- SHOOTER -->
+        <div class="enemy-card shooter">
+          <div class="enemy-glyph">
+            <svg width="52" height="52" viewBox="0 0 52 52" fill="none">
+              <!-- Crosshair reticle -->
+              <circle
+                cx="26"
+                cy="26"
+                r="14"
+                stroke="#FF00CC"
+                stroke-width="2"
+              />
+              <circle cx="26" cy="26" r="5" fill="#FF00CC" opacity="0.25" />
+              <circle cx="26" cy="26" r="2" fill="#FF00CC" />
+              <!-- cross lines (outside the circle) -->
+              <line
+                x1="26"
+                y1="4"
+                x2="26"
+                y2="12"
+                stroke="#FF00CC"
+                stroke-width="2"
+              />
+              <line
+                x1="26"
+                y1="40"
+                x2="26"
+                y2="48"
+                stroke="#FF00CC"
+                stroke-width="2"
+              />
+              <line
+                x1="4"
+                y1="26"
+                x2="12"
+                y2="26"
+                stroke="#FF00CC"
+                stroke-width="2"
+              />
+              <line
+                x1="40"
+                y1="26"
+                x2="48"
+                y2="26"
+                stroke="#FF00CC"
+                stroke-width="2"
+              />
+              <!-- tick marks on circle -->
+              <line
+                x1="26"
+                y1="12"
+                x2="26"
+                y2="15"
+                stroke="#FF00CC"
+                stroke-width="1.5"
+                opacity="0.6"
+              />
+              <line
+                x1="26"
+                y1="37"
+                x2="26"
+                y2="40"
+                stroke="#FF00CC"
+                stroke-width="1.5"
+                opacity="0.6"
+              />
+            </svg>
+          </div>
+          <div class="enemy-name">Shooter</div>
+          <div class="enemy-role">Fires across lanes<br />you must cross</div>
+        </div>
+
+        <!-- ORBITER -->
+        <div class="enemy-card orbiter">
+          <div class="enemy-glyph">
+            <svg width="52" height="52" viewBox="0 0 52 52" fill="none">
+              <!-- Core circle -->
+              <circle cx="26" cy="26" r="7" fill="#00FFFF" opacity="0.2" />
+              <circle cx="26" cy="26" r="7" stroke="#00FFFF" stroke-width="2" />
+              <!-- Orbit ring (dashed) -->
+              <circle
+                cx="26"
+                cy="26"
+                r="18"
+                stroke="#00FFFF"
+                stroke-width="1.5"
+                stroke-dasharray="4 3"
+                opacity="0.6"
+              />
+              <!-- Orbiting dot -->
+              <circle cx="44" cy="26" r="3.5" fill="#00FFFF" />
+              <!-- Orbital motion arc hint -->
+              <path
+                d="M 38 14 A 18 18 0 0 1 44 26"
+                stroke="#00FFFF"
+                stroke-width="1.5"
+                opacity="0.4"
+              />
+            </svg>
+          </div>
+          <div class="enemy-name">Orbiter</div>
+          <div class="enemy-role">Guards captured<br />territory in loops</div>
+        </div>
+
+        <!-- DISRUPTOR -->
+        <div class="enemy-card disruptor">
+          <div class="enemy-glyph">
+            <svg width="52" height="52" viewBox="0 0 52 52" fill="none">
+              <!-- Fragmented / shattered X shape -->
+              <!-- Main diagonal fragments -->
+              <line
+                x1="10"
+                y1="10"
+                x2="22"
+                y2="22"
+                stroke="#FFD700"
+                stroke-width="2.5"
+              />
+              <line
+                x1="30"
+                y1="30"
+                x2="42"
+                y2="42"
+                stroke="#FFD700"
+                stroke-width="2.5"
+              />
+              <line
+                x1="42"
+                y1="10"
+                x2="30"
+                y2="22"
+                stroke="#FFD700"
+                stroke-width="2.5"
+              />
+              <line
+                x1="22"
+                y1="30"
+                x2="10"
+                y2="42"
+                stroke="#FFD700"
+                stroke-width="2.5"
+              />
+              <!-- Gap between fragments — the break -->
+              <!-- Jagged crack pieces in the center -->
+              <polyline
+                points="22,22 25,24 27,21 30,22"
+                stroke="#FFD700"
+                stroke-width="1.5"
+                fill="none"
+                opacity="0.7"
+              />
+              <polyline
+                points="22,30 24,28 27,31 30,30"
+                stroke="#FFD700"
+                stroke-width="1.5"
+                fill="none"
+                opacity="0.7"
+              />
+              <!-- Small shard fragments -->
+              <line
+                x1="23"
+                y1="17"
+                x2="20"
+                y2="14"
+                stroke="#FFD700"
+                stroke-width="1"
+                opacity="0.4"
+              />
+              <line
+                x1="35"
+                y1="14"
+                x2="38"
+                y2="11"
+                stroke="#FFD700"
+                stroke-width="1"
+                opacity="0.4"
+              />
+              <line
+                x1="14"
+                y1="35"
+                x2="11"
+                y2="38"
+                stroke="#FFD700"
+                stroke-width="1"
+                opacity="0.4"
+              />
+              <line
+                x1="38"
+                y1="35"
+                x2="41"
+                y2="38"
+                stroke="#FFD700"
+                stroke-width="1"
+                opacity="0.4"
+              />
+              <!-- center dot -->
+              <circle cx="26" cy="26" r="2.5" fill="#FFD700" opacity="0.5" />
+            </svg>
+          </div>
+          <div class="enemy-name">Disruptor</div>
+          <div class="enemy-role">Breaks co-op bonds<br />when both draw</div>
+        </div>
       </div>
-      <div class="enemy-name">Shooter</div>
-      <div class="enemy-role">Fires across lanes<br>you must cross</div>
-    </div>
 
-    <!-- ORBITER -->
-    <div class="enemy-card orbiter">
-      <div class="enemy-glyph">
-        <svg width="52" height="52" viewBox="0 0 52 52" fill="none">
-          <!-- Core circle -->
-          <circle cx="26" cy="26" r="7" fill="#00FFFF" opacity="0.2"/>
-          <circle cx="26" cy="26" r="7" stroke="#00FFFF" stroke-width="2"/>
-          <!-- Orbit ring (dashed) -->
-          <circle cx="26" cy="26" r="18" stroke="#00FFFF" stroke-width="1.5"
-                  stroke-dasharray="4 3" opacity="0.6"/>
-          <!-- Orbiting dot -->
-          <circle cx="44" cy="26" r="3.5" fill="#00FFFF"/>
-          <!-- Orbital motion arc hint -->
-          <path d="M 38 14 A 18 18 0 0 1 44 26" stroke="#00FFFF" stroke-width="1.5" opacity="0.4"/>
-        </svg>
+      <div class="footer">
+        dignity2d &bull; solo &amp; co-op &bull; capture &amp; survive
       </div>
-      <div class="enemy-name">Orbiter</div>
-      <div class="enemy-role">Guards captured<br>territory in loops</div>
     </div>
-
-    <!-- DISRUPTOR -->
-    <div class="enemy-card disruptor">
-      <div class="enemy-glyph">
-        <svg width="52" height="52" viewBox="0 0 52 52" fill="none">
-          <!-- Fragmented / shattered X shape -->
-          <!-- Main diagonal fragments -->
-          <line x1="10" y1="10" x2="22" y2="22" stroke="#FFD700" stroke-width="2.5"/>
-          <line x1="30" y1="30" x2="42" y2="42" stroke="#FFD700" stroke-width="2.5"/>
-          <line x1="42" y1="10" x2="30" y2="22" stroke="#FFD700" stroke-width="2.5"/>
-          <line x1="22" y1="30" x2="10" y2="42" stroke="#FFD700" stroke-width="2.5"/>
-          <!-- Gap between fragments — the break -->
-          <!-- Jagged crack pieces in the center -->
-          <polyline points="22,22 25,24 27,21 30,22" stroke="#FFD700" stroke-width="1.5" fill="none" opacity="0.7"/>
-          <polyline points="22,30 24,28 27,31 30,30" stroke="#FFD700" stroke-width="1.5" fill="none" opacity="0.7"/>
-          <!-- Small shard fragments -->
-          <line x1="23" y1="17" x2="20" y2="14" stroke="#FFD700" stroke-width="1" opacity="0.4"/>
-          <line x1="35" y1="14" x2="38" y2="11" stroke="#FFD700" stroke-width="1" opacity="0.4"/>
-          <line x1="14" y1="35" x2="11" y2="38" stroke="#FFD700" stroke-width="1" opacity="0.4"/>
-          <line x1="38" y1="35" x2="41" y2="38" stroke="#FFD700" stroke-width="1" opacity="0.4"/>
-          <!-- center dot -->
-          <circle cx="26" cy="26" r="2.5" fill="#FFD700" opacity="0.5"/>
-        </svg>
-      </div>
-      <div class="enemy-name">Disruptor</div>
-      <div class="enemy-role">Breaks co-op bonds<br>when both draw</div>
-    </div>
-
-  </div>
-
-  <div class="footer">dignity2d &bull; solo &amp; co-op &bull; capture &amp; survive</div>
-
-</div>
-</body>
+  </body>
 </html>
