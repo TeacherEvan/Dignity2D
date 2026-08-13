@@ -31,7 +31,9 @@ const ALLOWED_CORS_ORIGINS = new Set<string>([
   "https://dignity2-d.vercel.app",
   "https://dignity2-d-git-main-teacher-evans-projects.vercel.app",
   ...(process.env.ALLOWED_CORS_ORIGINS
-    ? process.env.ALLOWED_CORS_ORIGINS.split(",").map((o) => o.trim()).filter(Boolean)
+    ? process.env.ALLOWED_CORS_ORIGINS.split(",")
+        .map((o) => o.trim())
+        .filter(Boolean)
     : []),
 ]);
 

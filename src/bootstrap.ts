@@ -70,4 +70,10 @@ export function stopGameSession(): void {
   if (container) {
     container.innerHTML = "";
   }
+
+  // Remove the injected in-game layout style so the launcher can show again
+  const style = document.getElementById("dignity-ingame-layout");
+  if (style) {
+    style.remove();
+  }
 }

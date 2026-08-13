@@ -9,13 +9,13 @@
 
 ## Executive Summary
 
-| Severity | Count |
-|----------|-------|
-| 🔴 Critical | 1 |
-| 🟠 High | 1 |
-| 🟡 Medium | 2 |
-| 🔵 Low | 1 |
-| **Total** | **5** |
+| Severity    | Count |
+| ----------- | ----- |
+| 🔴 Critical | 1     |
+| 🟠 High     | 1     |
+| 🟡 Medium   | 2     |
+| 🔵 Low      | 1     |
+| **Total**   | **5** |
 
 **Overall Assessment:** The game engine itself is functional and a level can be won, but the production deployment is effectively unplayable on first load because the canvas renders below the fold (requires scrolling), and multiplayer (Create/Join Room) is non-functional due to a missing backend URL in production.
 
@@ -24,16 +24,18 @@
 ## Issues
 
 ### Issue #1: Game canvas renders off-screen / below the fold (requires scrolling)
-| Field | Value |
-|-------|-------|
-| **Severity** | 🔴 Critical |
-| **Category** | Visual / Functional |
-| **URL** | https://dignity2-d.vercel.app/ (after Quick Play) |
+
+| Field        | Value                                             |
+| ------------ | ------------------------------------------------- |
+| **Severity** | 🔴 Critical                                       |
+| **Category** | Visual / Functional                               |
+| **URL**      | https://dignity2-d.vercel.app/ (after Quick Play) |
 
 **Description:**
-The Phaser canvas is not pinned to the viewport. The production stylesheet is missing the `#game-container { position: fixed; inset: 0 }` rule that exists in the source CSS (`src/game-container.css`). As a result `#app-shell` (the launcher) stays mounted and the canvas flows in normal document flow *below* it. Measured on a 567px-tall viewport: the canvas top is at y=712 and the document scrollHeight is 1142, so the entire play board sits below the visible fold and the page body is scrollable.
+The Phaser canvas is not pinned to the viewport. The production stylesheet is missing the `#game-container { position: fixed; inset: 0 }` rule that exists in the source CSS (`src/game-container.css`). As a result `#app-shell` (the launcher) stays mounted and the canvas flows in normal document flow _below_ it. Measured on a 567px-tall viewport: the canvas top is at y=712 and the document scrollHeight is 1142, so the entire play board sits below the visible fold and the page body is scrollable.
 
 **Steps to Reproduce:**
+
 1. Open https://dignity2-d.vercel.app/
 2. Click "Quick Play".
 3. Observe the play board is not in the initial viewport; the launcher shell still occupies the top of the page and you must scroll down to reach/play the game.
@@ -48,23 +50,25 @@ Canvas is pushed off-screen below the launcher (canvasTop=712 vs viewportH=567);
 MEDIA:/home/ewaldt/Documents/VS/GAMES/Dignity2D/dogfood-output/screenshots/01-canvas-offscreen.png
 
 **Console Errors:**
-None at runtime (the defect is a missing CSS rule, not a JS error). Confirmed by inspecting the live page's only stylesheet (`index-CnO8ec8P.css`): it contains **zero** `#game-container` rules. The local `dist` build CSS *does* contain the rule, proving it was dropped by the production bundler.
+None at runtime (the defect is a missing CSS rule, not a JS error). Confirmed by inspecting the live page's only stylesheet (`index-CnO8ec8P.css`): it contains **zero** `#game-container` rules. The local `dist` build CSS _does_ contain the rule, proving it was dropped by the production bundler.
 
 **Fix applied (in this session):** `src/bootstrap.ts` now calls `ensureInGameLayout()` on `startGameSession()`, which injects the fixed-position rule imperatively (with `!important`) so the canvas is always pinned regardless of CSS bundling. Verified live by injecting the same rule — canvas moved from y=712 to y=134 and became fully visible with no scroll. A fresh Vercel redeploy from current `main` is also required to resync the production toolchain (see Issue #5).
 
 ---
 
 ### Issue #2: Create Room / Join Room fail ("ROOM SETUP FAILED")
-| Field | Value |
-|-------|-------|
-| **Severity** | 🟠 High |
-| **Category** | Functional |
-| **URL** | https://dignity2-d.vercel.app/ (Create Room, Join Room) |
+
+| Field        | Value                                                   |
+| ------------ | ------------------------------------------------------- |
+| **Severity** | 🟠 High                                                 |
+| **Category** | Functional                                              |
+| **URL**      | https://dignity2-d.vercel.app/ (Create Room, Join Room) |
 
 **Description:**
 Multiplayer flows fail immediately. On the hosted site `VITE_SERVER_URL` is not set, so `DEFAULT_SERVER_URL` (in `src/net/serverApi.ts`, `resolveDefaultServerUrl()`) resolves to `null`. Clicking **Create Room** throws and the launcher shows "ROOM SETUP FAILED." (or "Online rooms need the backend." when the hint text matches). **Join Room** behaves the same. No game starts.
 
 **Steps to Reproduce:**
+
 1. Open the launcher.
 2. Click "Create Room" (or type a room ID and click "Join").
 3. Status text shows "ROOM SETUP FAILED." / "Online rooms need the backend."
@@ -86,20 +90,23 @@ None (handled by try/catch in `launcher.ts`). Root cause is config, not a crash.
 ---
 
 ### Issue #3: Production runs a different toolchain than the repo (Phaser v4 + Vite 8 vs pinned Phaser 3.80.1 + Vite 5.4.20)
-| Field | Value |
-|-------|-------|
-| **Severity** | 🟡 Medium |
-| **Category** | Console / Build |
-| **URL** | https://dignity2-d.vercel.app/ |
+
+| Field        | Value                          |
+| ------------ | ------------------------------ |
+| **Severity** | 🟡 Medium                      |
+| **Category** | Console / Build                |
+| **URL**      | https://dignity2-d.vercel.app/ |
 
 **Description:**
 The deployed bundle is built from a different toolchain than the committed repo:
+
 - **Prod console:** `Phaser v4.1.0`, and the JS bundle imports `rolldown-runtime` (Vite 8+).
-- **Repo pins:** `phaser ^3.80.1`, `vite ^5.4.20` (`package.json`). Local `npm run build` produces `vite 5.4.20` / `phaser 3.80.1` and a CSS that *contains* the `#game-container` fixed rule.
+- **Repo pins:** `phaser ^3.80.1`, `vite ^5.4.20` (`package.json`). Local `npm run build` produces `vite 5.4.20` / `phaser 3.80.1` and a CSS that _contains_ the `#game-container` fixed rule.
 
 This mismatch is the underlying cause of Issue #1 (the prod CSS that dropped the rule is a Vite-8/rolldown build artifact). It also risks Phaser v4 API breakage vs v3.
 
 **Steps to Reproduce:**
+
 1. Open the live site.
 2. Check console: `Phaser v4.1.0 (WebGL | Web Audio)`.
 3. Inspect network: the entry JS imports `rolldown-runtime-*.js`.
@@ -112,6 +119,7 @@ Production is on Phaser v4 + Vite 8 (rolldown). The Vercel build cache/state is 
 
 **Screenshot:** (none — build artifact evidence)
 **Console Errors:**
+
 ```
 Phaser v4.1.0 (WebGL | Web Audio)   [info banner]
 Deprecated feature used (count: 1)  [issue/warning]
@@ -122,16 +130,18 @@ Deprecated feature used (count: 1)  [issue/warning]
 ---
 
 ### Issue #4: Favicon 404
-| Field | Value |
-|-------|-------|
-| **Severity** | 🟡 Medium |
-| **Category** | Console / Content |
-| **URL** | https://dignity2-d.vercel.app/ |
+
+| Field        | Value                          |
+| ------------ | ------------------------------ |
+| **Severity** | 🟡 Medium                      |
+| **Category** | Console / Content              |
+| **URL**      | https://dignity2-d.vercel.app/ |
 
 **Description:**
 The browser requests `/favicon.ico` and receives a 404. No favicon is configured for the deployment.
 
 **Steps to Reproduce:**
+
 1. Open the site.
 2. Check Network/Console for `GET /favicon.ico` → 404.
 
@@ -143,6 +153,7 @@ A favicon is served (or `index.html` declares one), avoiding a 404.
 
 **Screenshot:** (none)
 **Console Errors:**
+
 ```
 Failed to load resource: the server responded with a status of 404 ()
 ```
@@ -150,16 +161,18 @@ Failed to load resource: the server responded with a status of 404 ()
 ---
 
 ### Issue #5: Deprecated-feature console warning on load
-| Field | Value |
-|-------|-------|
-| **Severity** | 🔵 Low |
-| **Category** | Console |
-| **URL** | https://dignity2-d.vercel.app/ |
+
+| Field        | Value                          |
+| ------------ | ------------------------------ |
+| **Severity** | 🔵 Low                         |
+| **Category** | Console                        |
+| **URL**      | https://dignity2-d.vercel.app/ |
 
 **Description:**
 A single deprecation warning is emitted on page load (count: 1), likely tied to the Phaser v4 runtime from Issue #3.
 
 **Steps to Reproduce:**
+
 1. Open the site.
 2. Observe console: `Deprecated feature used (count: 1)`.
 
@@ -171,6 +184,7 @@ One deprecation warning present.
 
 **Screenshot:** (none)
 **Console Errors:**
+
 ```
 Deprecated feature used (count: 1)
 ```
@@ -179,19 +193,20 @@ Deprecated feature used (count: 1)
 
 ## Issues Summary Table
 
-| # | Title | Severity | Category | URL |
-|---|-------|----------|----------|-----|
-| 1 | Game canvas renders below the fold (requires scrolling to play) | 🔴 Critical | Visual / Functional | / (after Quick Play) |
-| 2 | Create Room / Join Room fail ("ROOM SETUP FAILED") | 🟠 High | Functional | / |
-| 3 | Prod toolchain drift: Phaser v4 + Vite 8 vs pinned phaser 3.80.1 + vite 5.4.20 | 🟡 Medium | Build / Console | / |
-| 4 | Favicon 404 | 🟡 Medium | Console / Content | / |
-| 5 | Deprecated-feature console warning | 🔵 Low | Console | / |
+| #   | Title                                                                          | Severity    | Category            | URL                  |
+| --- | ------------------------------------------------------------------------------ | ----------- | ------------------- | -------------------- |
+| 1   | Game canvas renders below the fold (requires scrolling to play)                | 🔴 Critical | Visual / Functional | / (after Quick Play) |
+| 2   | Create Room / Join Room fail ("ROOM SETUP FAILED")                             | 🟠 High     | Functional          | /                    |
+| 3   | Prod toolchain drift: Phaser v4 + Vite 8 vs pinned phaser 3.80.1 + vite 5.4.20 | 🟡 Medium   | Build / Console     | /                    |
+| 4   | Favicon 404                                                                    | 🟡 Medium   | Console / Content   | /                    |
+| 5   | Deprecated-feature console warning                                             | 🔵 Low      | Console             | /                    |
 
 ---
 
 ## Testing Coverage
 
 ### Pages Tested
+
 - Launcher / landing page (https://dignity2-d.vercel.app/)
 - In-game (after Quick Play) — board, HUD, player, enemies, capture mechanic
 - Settings panel (Control Layout: Primary Hand, Joystick Scale)
@@ -200,18 +215,21 @@ Deprecated feature used (count: 1)
 - Join Room flow (room ID input + Join)
 
 ### Features Tested
+
 - Quick Play → game starts, Phaser loop runs (frame ~11.5k observed), keyboard input moves the player.
 - Capture mechanic: drove the real engine through a closed-loop trail; reveal went 0% → 11%, captures=1. Win threshold = 75% reveal ("IMAGE SECURED" overlay); 0 lives = "SIGNAL LOST". **Mechanic is sound; a level is completable.**
 - Settings toggle, Accessibility toggle (no errors).
 - Create Room / Join Room (both fail without backend — Issue #2).
 
 ### Not Tested / Out of Scope
+
 - Full 75% completion via live input (engine confirmed working; full automated win was limited by the `isSafePoint` start-on-border requirement for chained loops, not by any bug).
 - Multiplayer actual sync (blocked by Issue #2 — no backend in prod).
 - Image upload (requires backend `VITE_SERVER_URL`, same gap as Issue #2).
 - Mobile/touch joystick (desktop viewport used).
 
 ### Blockers
+
 - Live browser tool backend returned 502 Bad Gateway mid-session; remaining checks (re-confirm Join visually) were completed via source inspection + earlier chrome_devtools DOM measurements.
 - Multiplayer and upload are blocked for all users by the missing production `VITE_SERVER_URL` (Issue #2/#3).
 

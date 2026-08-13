@@ -674,7 +674,9 @@ export class GameScene extends Phaser.Scene {
     this.trailGlow = this.add.graphics().setDepth(-1);
     this.captureGlow = this.add.graphics().setDepth(0);
     this.playerGlow = this.add.circle(0, 0, 18, PALETTE.CYAN, 0.18);
-    this.playerPulse = this.add.circle(0, 0, 14, PALETTE.CYAN, 0).setStrokeStyle(2, PALETTE.CYAN, 0.5);
+    this.playerPulse = this.add
+      .circle(0, 0, 14, PALETTE.CYAN, 0)
+      .setStrokeStyle(2, PALETTE.CYAN, 0.5);
     this.playerMarker = this.add.circle(0, 0, 8, PALETTE.CYAN);
     this.playerMarker.setStrokeStyle(2, PALETTE.WHITE, 0.9);
     this.teammateMarkers = this.state.players
@@ -687,7 +689,9 @@ export class GameScene extends Phaser.Scene {
       this.add.circle(0, 0, 22, PALETTE.AMBER, 0.16),
     );
     this.enemyPulseMarkers = this.state.enemies.map(() =>
-      this.add.circle(0, 0, 16, PALETTE.AMBER, 0).setStrokeStyle(2, PALETTE.AMBER, 0.4),
+      this.add
+        .circle(0, 0, 16, PALETTE.AMBER, 0)
+        .setStrokeStyle(2, PALETTE.AMBER, 0.4),
     );
     this.enemyGlyphTexts = this.state.enemies.map(() =>
       this.add
@@ -998,7 +1002,9 @@ export class GameScene extends Phaser.Scene {
     if (this.playerPulse && !this.prefersReducedMotion) {
       const p = 0.5 + 0.5 * Math.sin(this.time.now / 240);
       const radius = 14 + 4 * p;
-      this.playerPulse.setScale(radius / 14).setStrokeStyle(2, PALETTE.CYAN, 0.25 + 0.4 * p);
+      this.playerPulse
+        .setScale(radius / 14)
+        .setStrokeStyle(2, PALETTE.CYAN, 0.25 + 0.4 * p);
     }
 
     while (this.teammateMarkers.length < this.state.players.length - 1) {
@@ -1026,7 +1032,9 @@ export class GameScene extends Phaser.Scene {
         this.add.circle(0, 0, 22, PALETTE.AMBER, 0.16),
       );
       this.enemyPulseMarkers.push(
-        this.add.circle(0, 0, 16, PALETTE.AMBER, 0).setStrokeStyle(2, PALETTE.AMBER, 0.4),
+        this.add
+          .circle(0, 0, 16, PALETTE.AMBER, 0)
+          .setStrokeStyle(2, PALETTE.AMBER, 0.4),
       );
       this.enemyGlyphTexts.push(
         this.add
@@ -1050,7 +1058,9 @@ export class GameScene extends Phaser.Scene {
       glow?.setPosition(position.x, position.y).setFillStyle(color, 0.16);
       if (pulse && !this.prefersReducedMotion) {
         const p = 0.5 + 0.5 * Math.sin(this.time.now / 300 + index * 1.3);
-        pulse.setPosition(position.x, position.y).setStrokeStyle(2, color, 0.2 + 0.45 * p);
+        pulse
+          .setPosition(position.x, position.y)
+          .setStrokeStyle(2, color, 0.2 + 0.45 * p);
         pulse.setScale((16 + 4 * p) / 16);
       }
       glyph
@@ -1123,13 +1133,27 @@ export class GameScene extends Phaser.Scene {
     const top = Phaser.Display.Color.IntegerToColor(0x1d1226);
     const bottom = Phaser.Display.Color.IntegerToColor(PALETTE.VOID);
     for (let i = 0; i < bands; i++) {
-      const c = Phaser.Display.Color.Interpolate.ColorWithColor(top, bottom, bands - 1, i);
+      const c = Phaser.Display.Color.Interpolate.ColorWithColor(
+        top,
+        bottom,
+        bands - 1,
+        i,
+      );
       base.fillStyle(Phaser.Display.Color.GetColor(c.r, c.g, c.b), 1);
-      base.fillRect(0, (boardSize.height * i) / bands, boardSize.width, boardSize.height / bands + 1);
+      base.fillRect(
+        0,
+        (boardSize.height * i) / bands,
+        boardSize.width,
+        boardSize.height / bands + 1,
+      );
     }
 
     // Soft radial core glow near the upper-center for depth.
-    const glow = this.add.graphics().setPosition(ox, oy).setDepth(-4).setBlendMode(Phaser.BlendModes.ADD);
+    const glow = this.add
+      .graphics()
+      .setPosition(ox, oy)
+      .setDepth(-4)
+      .setBlendMode(Phaser.BlendModes.ADD);
     const cx = boardSize.width / 2;
     const cy = boardSize.height * 0.38;
     const maxR = Math.max(boardSize.width, boardSize.height) * 0.8;
@@ -1176,7 +1200,12 @@ export class GameScene extends Phaser.Scene {
       const inset = (i / vSteps) * 28;
       const a = 0.08 * (i / vSteps);
       vignette.lineStyle(2, PALETTE.BORDER, a);
-      vignette.strokeRect(inset, inset, boardSize.width - inset * 2, boardSize.height - inset * 2);
+      vignette.strokeRect(
+        inset,
+        inset,
+        boardSize.width - inset * 2,
+        boardSize.height - inset * 2,
+      );
     }
 
     this.background = base;
@@ -1288,9 +1317,21 @@ export class GameScene extends Phaser.Scene {
 
     // Soft outer glow behind each panel so the HUD reads as a lit instrument.
     this.hudChrome.fillStyle(PALETTE.GOLD, 0.06);
-    this.hudChrome.fillRoundedRect(frameLeft - 4, frameTop - 4, frameWidth + 8, HUD_FRAME_HEIGHT + 8, 10);
+    this.hudChrome.fillRoundedRect(
+      frameLeft - 4,
+      frameTop - 4,
+      frameWidth + 8,
+      HUD_FRAME_HEIGHT + 8,
+      10,
+    );
     this.hudChrome.fillStyle(PALETTE.SAND, 0.05);
-    this.hudChrome.fillRoundedRect(sealLeft - 4, frameTop - 4, sealSize + 8, HUD_FRAME_HEIGHT + 8, 10);
+    this.hudChrome.fillRoundedRect(
+      sealLeft - 4,
+      frameTop - 4,
+      sealSize + 8,
+      HUD_FRAME_HEIGHT + 8,
+      10,
+    );
 
     drawChamferedPanel(
       this.hudChrome,
@@ -1316,8 +1357,18 @@ export class GameScene extends Phaser.Scene {
     );
     // Inner top highlight to give the panels a beveled, metallic sheen.
     this.hudChrome.lineStyle(1, PALETTE.WHITE, 0.08);
-    this.hudChrome.lineBetween(frameLeft + 6, frameTop + 4, frameLeft + frameWidth - 6, frameTop + 4);
-    this.hudChrome.lineBetween(sealLeft + 6, frameTop + 4, sealLeft + sealSize - 6, frameTop + 4);
+    this.hudChrome.lineBetween(
+      frameLeft + 6,
+      frameTop + 4,
+      frameLeft + frameWidth - 6,
+      frameTop + 4,
+    );
+    this.hudChrome.lineBetween(
+      sealLeft + 6,
+      frameTop + 4,
+      sealLeft + sealSize - 6,
+      frameTop + 4,
+    );
 
     this.hudSignal.lineStyle(1, PALETTE.CYAN, 0.45);
     this.hudSignal.lineBetween(

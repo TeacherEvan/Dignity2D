@@ -643,7 +643,13 @@ function startTraceScope(reduced: boolean): void {
     ctx.shadowBlur = 0;
     ctx.fillStyle = c.cyan;
     ctx.beginPath();
-    ctx.arc(w * 0.58, h * 0.62, 4 * (window.devicePixelRatio || 1), 0, Math.PI * 2);
+    ctx.arc(
+      w * 0.58,
+      h * 0.62,
+      4 * (window.devicePixelRatio || 1),
+      0,
+      Math.PI * 2,
+    );
     ctx.fill();
     return;
   }
@@ -700,7 +706,10 @@ function startTraceScope(reduced: boolean): void {
 
     // Committed territory once the loop closes.
     if (progress > tracePhase) {
-      const lock = Math.min(1, (progress - tracePhase) / (holdPhase - tracePhase));
+      const lock = Math.min(
+        1,
+        (progress - tracePhase) / (holdPhase - tracePhase),
+      );
       ctx.beginPath();
       pts.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
       ctx.closePath();
@@ -717,7 +726,9 @@ function startTraceScope(reduced: boolean): void {
     // Gold tracer line + glowing tip.
     if (tracer.length > 1) {
       ctx.beginPath();
-      tracer.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
+      tracer.forEach((p, i) =>
+        i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y),
+      );
       ctx.lineWidth = 3 * dpr;
       ctx.strokeStyle = c.gold;
       ctx.shadowColor = c.gold;
@@ -735,7 +746,7 @@ function startTraceScope(reduced: boolean): void {
     }
 
     // A chaser drifts along the bottom edge.
-    const cx = m + ((w - 2 * m) * ((t / 2600) % 1));
+    const cx = m + (w - 2 * m) * ((t / 2600) % 1);
     ctx.beginPath();
     ctx.moveTo(cx - 7 * dpr, head ? h - m * 0.4 : h - m);
     ctx.lineTo(cx + 7 * dpr, h - m * 0.4);

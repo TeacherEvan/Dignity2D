@@ -1,6 +1,11 @@
 import { defineConfig } from "@playwright/test";
 
-const FRONTEND_E2E_URL = "http://127.0.0.1:4173";
+const FRONTEND_E2E_URL = "http://127.0.0.1:4188";
+// 4173 is grabbed by a sibling project's dev server on this shared machine, so
+// the e2e frontend uses a dedicated port (matching the backend's 8799 move to
+// dodge the LINE bridge). strictPort fails loudly on collision instead of
+// silently binding to the wrong app when reuseExistingServer is true.
+const E2E_FRONTEND_PORT = 4188;
 // 8787 collides with an always-on personal service (LINE bridge) in this dev
 // environment, so the e2e backend uses a dedicated port to avoid grabbing the
 // wrong server when reuseExistingServer is true.
@@ -13,9 +18,10 @@ export default defineConfig({
     // End-to-end coverage exercises both the launcher shell and the local room/upload server.
     {
       command:
-        "VITE_SERVER_URL=" + E2E_BACKEND_URL + " npm run dev -- --port 4173",
+        "VITE_SERVER_URL=" + E2E_BACKEND_URL + " npm run dev -- --port " + E2E_FRONTEND_PORT + " --strictPort",
       url: FRONTEND_E2E_URL,
       reuseExistingServer: true,
+      timeout: 60000,
     },
     {
       command: `PORT=${E2E_BACKEND_PORT} npm run server:start`,
