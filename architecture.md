@@ -56,9 +56,8 @@ The visual layer is split into small pieces:
 
 - `src/render/RevealMask.ts` handles reveal text formatting and mask resolution sizing.
 - `src/theme/palette.ts` defines the Golden Cyberpunk Egyptian token set.
-- `src/theme/TrailStyle.ts` selects safe defaults and reduced-effects fallbacks.
-- `src/theme/VoronoiPostFX.ts` and `src/theme/ACESTonemapping.ts` provide Phaser-compatible shader strings and thin pipeline wrappers.
-- `src/performance/PerformanceProfile.ts` disables expensive effects on low FPS, reduced motion, or known slow GPU strings.
+- `src/theme/visuals.ts` provides presentation helpers for visual effects.
+- Runtime performance fallbacks (low-FPS / reduced-motion / slow-GPU) are not yet implemented; `src/performance/` is reserved for that subsystem.
 
 The architecture assumes gameplay remains readable even if shader-based polish is disabled.
 

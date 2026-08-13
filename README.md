@@ -101,7 +101,7 @@ Core rules stay outside Phaser wherever possible:
 - `src/enemies/` contains enemy wave spawning.
 - `src/input/` contains joystick math.
 - `src/render/` contains reveal/mask helpers.
-- `src/theme/` and `src/performance/` contain presentation and fallback logic.
+- `src/theme/` contains palette tokens and visual helpers; `src/performance/` is reserved for runtime fallback logic (not yet implemented).
 
 ### Server
 
