@@ -573,6 +573,8 @@ export class GameScene extends Phaser.Scene {
   private bgScan?: Phaser.GameObjects.Graphics;
   private bgVignette?: Phaser.GameObjects.Graphics;
   private sweep?: Phaser.GameObjects.Graphics;
+  private backgroundReveal?: Phaser.GameObjects.Image;
+  private revealedImageId?: string;
   private captureGlow?: Phaser.GameObjects.Graphics;
   private trailGlow?: Phaser.GameObjects.Graphics;
   private playerPulse?: Phaser.GameObjects.Arc;
@@ -637,6 +639,7 @@ export class GameScene extends Phaser.Scene {
         boardSize.width,
         boardSize.height,
         PALETTE.VOID,
+        0.7,
       )
       .setStrokeStyle(3, PALETTE.GOLD);
 
@@ -1130,8 +1133,8 @@ export class GameScene extends Phaser.Scene {
     // Base wash: vertical gradient from a desaturated gold tint down to the void.
     const base = this.add.graphics().setPosition(ox, oy).setDepth(-5);
     const bands = 28;
-    const top = Phaser.Display.Color.IntegerToColor(0x1d1226);
-    const bottom = Phaser.Display.Color.IntegerToColor(PALETTE.VOID);
+    const top = Phaser.Display.Color.IntegerToColor(0x2a1f3d);
+    const bottom = Phaser.Display.Color.IntegerToColor(0x14102a);
     for (let i = 0; i < bands; i++) {
       const c = Phaser.Display.Color.Interpolate.ColorWithColor(
         top,
@@ -1160,24 +1163,24 @@ export class GameScene extends Phaser.Scene {
     const glowSteps = 24;
     for (let i = glowSteps; i >= 1; i--) {
       const r = (maxR * i) / glowSteps;
-      const a = 0.07 * (1 - i / glowSteps);
+      const a = 0.14 * (1 - i / glowSteps);
       glow.fillStyle(PALETTE.GOLD, a);
       glow.fillCircle(cx, cy, r);
     }
 
     // Faint dot grid for spatial reference.
     const dots = this.add.graphics().setPosition(ox, oy).setDepth(-4);
-    dots.fillStyle(PALETTE.SAND, 0.16);
+    dots.fillStyle(PALETTE.SAND, 0.42);
     const dotStep = 26;
     for (let x = dotStep / 2; x < boardSize.width; x += dotStep) {
       for (let y = dotStep / 2; y < boardSize.height; y += dotStep) {
-        dots.fillCircle(x, y, 1.3);
+        dots.fillCircle(x, y, 2);
       }
     }
 
     // Structural grid lines.
     const grid = this.add.graphics().setPosition(ox, oy).setDepth(-4);
-    grid.lineStyle(1, PALETTE.GOLD, 0.08);
+    grid.lineStyle(1, PALETTE.GOLD, 0.22);
     const step = 24;
     for (let x = step; x < boardSize.width; x += step) {
       grid.lineBetween(x, 0, x, boardSize.height);
@@ -1188,7 +1191,7 @@ export class GameScene extends Phaser.Scene {
 
     // Scanlines for an arcane-device feel.
     const scan = this.add.graphics().setPosition(ox, oy).setDepth(-3);
-    scan.fillStyle(0x000000, 0.1);
+    scan.fillStyle(0x000000, 0.18);
     for (let y = 0; y < boardSize.height; y += 4) {
       scan.fillRect(0, y, boardSize.width, 2);
     }
@@ -1214,6 +1217,39 @@ export class GameScene extends Phaser.Scene {
     this.bgScan = scan;
     this.bgVignette = vignette;
     this.sweep = this.add.graphics().setDepth(-4).setPosition(ox, oy);
+
+    // Image-reveal overlay: discovered-image layer (overlay mode, preserves gradient).
+    // Uses UUID-based manifest + localStorage persistence (`src/discovery/store.ts`).
+    // Non-repeat: next undiscovered picked; once level completes, `addDiscovered(id)` saves.
+    this.loadRevealOverlay().catch(() => {
+      /* graceful: no reveal on fetch/load failure */
+    });
+  }
+
+  private async loadRevealOverlay(): Promise<void> {
+    try {
+      const { pickNextReveal } = await import("../discovery/store");
+      const nextReveal = await pickNextReveal();
+      if (!nextReveal) return; // nothing new to reveal yet
+      const imgUrl = `/discovered-images/${nextReveal.filename}`;
+      const key = `reveal-${nextReveal.id}`;
+      this.load.once(
+        "filecomplete",
+        () => {
+          const spr = this.add
+            .image(this.scale.width / 2, this.scale.height / 2, key)
+            .setDepth(-6)
+            .setAlpha(0.22);
+          this.backgroundReveal = spr;
+          this.revealedImageId = nextReveal.id;
+        },
+        this,
+      );
+      this.load.image(key, imgUrl);
+      this.load.start();
+    } catch {
+      // Silent fail: reveal is cosmetic; don't break gameplay.
+    }
   }
 
   private animateBackground(delta: number): void {

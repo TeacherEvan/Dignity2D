@@ -17,3 +17,4 @@ fix_summary.md
 investigation_report.md
 .vercel
 .env*
+.venv/

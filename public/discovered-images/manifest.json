@@ -1,0 +1,18 @@
+{
+  "images": [
+    {
+      "id": "rev-01",
+      "filename": "reveal-01-gold-cosmic.png",
+      "levelUnlock": "level-complete-first",
+      "keyUsed": "UUID"
+    },
+    {
+      "id": "rev-02",
+      "filename": "reveal-02-void-ring.png",
+      "levelUnlock": "level-complete-second",
+      "keyUsed": "UUID"
+    }
+  ],
+  "keyType": "UUID",
+  "cacheKey": "dignity2d-discovered"
+}
