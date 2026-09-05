@@ -18,3 +18,4 @@ investigation_report.md
 .vercel
 .env*
 .venv/
+docs/.scratch-audit/
