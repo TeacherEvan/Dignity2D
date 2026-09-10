@@ -1,0 +1,48 @@
+{
+  "meta": {
+    "repo": "Dignity2D",
+    "group": "GAMES",
+    "generated": "2026-08-15 18:55",
+    "branch": "main",
+    "commits": "46",
+    "lang": "Node/JS",
+    "status": "proposed"
+  },
+  "items": [
+    {
+      "area": "Visuals",
+      "action": "Execute docs/plans/2026-07-12-enhance-visuals-gameplay (Phaser scene polish, portrait mobile)."
+    },
+    {
+      "area": "Multiplayer",
+      "action": "Wire room transport + upload processing into co-op flow using shared protocol types."
+    },
+    {
+      "area": "Launcher",
+      "action": "Finish signal-ember launcher + runtime cohesion backlog (.github/superpower/plan/*)."
+    },
+    {
+      "area": "Tests",
+      "action": "Keep Vitest + Playwright green around core capture/collision/scoring."
+    }
+  ],
+  "instructions": "Dignity2D (GAMES): proposed workstreams. Agent reads HERMES_PLAN.html ticks: approve(a)=implement, change(c)=revisit/clarify, skip=ignore. Compact form below.",
+  "compact": [
+    {
+      "a": "V",
+      "summary": "Execute docs/plans/2026-07-12-enhance-visuals-gameplay (Phaser scene polish, portrait mobile)."
+    },
+    {
+      "a": "M",
+      "summary": "Wire room transport + upload processing into co-op flow using shared protocol types."
+    },
+    {
+      "a": "L",
+      "summary": "Finish signal-ember launcher + runtime cohesion backlog (.github/superpower/plan/*)."
+    },
+    {
+      "a": "T",
+      "summary": "Keep Vitest + Playwright green around core capture/collision/scoring."
+    }
+  ]
+}
