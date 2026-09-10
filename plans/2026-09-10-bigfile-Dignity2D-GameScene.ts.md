@@ -177,3 +177,15 @@ derived from the structural signals above — they name concrete extractions
   its next tick.
 - implementer: `cron_surgical_impl.py` will pick this plan up once the reviewer
   marks it `READY` or `READY-WITH-WARNINGS`.
+
+
+## REVIEW 2026-09-10T15:45:50.898504+07:00
+
+**Verdict:** `NEEDS-REVISION`
+
+**Structural check:** objectives=12 file_header=✓ imports=✓ why=✓ dod=✓ security=✓
+
+**Gaps:**
+1. **OBJ-006 through OBJ-010 are identical placeholder filler.** All five read verbatim "Hardening pass N — Tighten types / tighten prop drilling… post-extraction" with no distinct target, no specific file region, and no measurable outcome. They add zero value and signal the planner ran out of real objectives. Replace with concrete, distinct extractions or delete them.
+2. **OBJ-005 (≤725 lines) has no supporting extraction plan.** OBJ-001–OBJ-004 plus the hardening passes cannot plausibly remove 725+ lines from a 1,450-line file. The plan names no specific functions, components, or render branches to extract — only constants relocation (≈7 lines) and type tightening. Without explicit extraction targets with line-count estimates, the 725-line goal is unsupported.
+3. **Structural check misfires on a plan that clearly has objectives, header, imports, and a why section.** The checker reports `objectives=0` and `has_header=None` etc., but the plan body contains all four. This false negative undermines confidence in the audit trail and suggests the plan format may not be parseable by the auditor's own tooling — a precondition for any reliable gate.
