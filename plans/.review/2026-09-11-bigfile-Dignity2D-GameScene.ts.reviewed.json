@@ -1,0 +1,11 @@
+{
+  "plan": "2026-09-11-bigfile-Dignity2D-GameScene.ts.md",
+  "verdict": "NEEDS-REVISION",
+  "ready_for_impl": false,
+  "gaps": [
+    "**OBJ-006\u2013OBJ-010 are template filler.** Five consecutive \"Hardening pass N\" objectives with byte-identical text (\"Tighten types / tighten prop drilling\u2026 no `any` added\") \u2014 zero concrete targets, zero line anchors, zero measurable outcomes. The plan claims to be \"file-aware\" but these slots are generic N-slice filler.",
+    "**The 12 top-level exports go unaddressed.** Structural analysis names `resolveSceneLayoutMetrics`, `createSceneGameState`, `advanceGameState`, `applyRoomStateSyncSnapshot`, `makeHudSnapshot`, `makeHudDisplayModel`, `makePreviewLabel`, `makeGameStatusText`, etc. \u2014 yet no objective targets any of them for extraction. Only the 7 constants (OBJ-002) get a concrete extraction plan. The line-reduction goal (OBJ-005: 1,450 \u2192 \u2264725) is asserted with no roadmap of *what* gets extracted to earn those lines.",
+    "**Missing required sections.** Structural check flags `has_dod=None`, `has_security=None`, `has_why=None` (the \"Why this file matters\" paragraph is generic boilerplate about \"largest source file under standard source roots\" \u2014 not a file-specific rationale). No Definition of Done, no security/privacy considerations, no rollback strategy, no incremental validation plan beyond a single \"pnpm run build && test && test:e2e\" gate reference."
+  ],
+  "reviewed_at": "2026-09-11T17:14:13.162942+07:00"
+}

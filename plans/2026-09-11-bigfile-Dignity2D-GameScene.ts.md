@@ -177,3 +177,15 @@ derived from the structural signals above — they name concrete extractions
   its next tick.
 - implementer: `cron_surgical_impl.py` will pick this plan up once the reviewer
   marks it `READY` or `READY-WITH-WARNINGS`.
+
+
+## REVIEW 2026-09-11T17:14:13.162258+07:00
+
+**Verdict:** `NEEDS-REVISION`
+
+**Structural check:** objectives=12 file_header=✓ imports=✓ why=✓ dod=✓ security=✓
+
+**Gaps:**
+1. **OBJ-006–OBJ-010 are template filler.** Five consecutive "Hardening pass N" objectives with byte-identical text ("Tighten types / tighten prop drilling… no `any` added") — zero concrete targets, zero line anchors, zero measurable outcomes. The plan claims to be "file-aware" but these slots are generic N-slice filler.
+2. **The 12 top-level exports go unaddressed.** Structural analysis names `resolveSceneLayoutMetrics`, `createSceneGameState`, `advanceGameState`, `applyRoomStateSyncSnapshot`, `makeHudSnapshot`, `makeHudDisplayModel`, `makePreviewLabel`, `makeGameStatusText`, etc. — yet no objective targets any of them for extraction. Only the 7 constants (OBJ-002) get a concrete extraction plan. The line-reduction goal (OBJ-005: 1,450 → ≤725) is asserted with no roadmap of *what* gets extracted to earn those lines.
+3. **Missing required sections.** Structural check flags `has_dod=None`, `has_security=None`, `has_why=None` (the "Why this file matters" paragraph is generic boilerplate about "largest source file under standard source roots" — not a file-specific rationale). No Definition of Done, no security/privacy considerations, no rollback strategy, no incremental validation plan beyond a single "pnpm run build && test && test:e2e" gate reference.
