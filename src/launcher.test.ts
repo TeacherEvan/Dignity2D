@@ -305,6 +305,8 @@ describe("launcher layout integration", () => {
   });
 
   it("creates a room and launches multiplayer with returned session data", async () => {
+    const sink = vi.fn();
+    mountLauncher({ diagnostics: { sink } });
     vi.mocked(createRoomSession).mockResolvedValue({
       roomId: "room-7",
       playerId: "p-7",
@@ -317,7 +319,6 @@ describe("launcher layout integration", () => {
       retention: null,
     });
 
-    mountLauncher();
     document.querySelector<HTMLButtonElement>("#create-room-button")?.click();
     await new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -340,9 +341,24 @@ describe("launcher layout integration", () => {
         stateVersion: 3,
       }),
     );
+
+    const createFlattened = sink.mock.calls.flatMap(([events]) => events);
+    expect(
+      createFlattened.map((event) => event.name),
+    ).toEqual(
+      expect.arrayContaining([
+        "welcome_viewed",
+        "display_detected",
+        "layout_loaded",
+        "room_created",
+        "multiplayer_started",
+      ]),
+    );
   });
 
   it("joins a room and launches multiplayer with the joined room id", async () => {
+    const sink = vi.fn();
+    mountLauncher({ diagnostics: { sink } });
     vi.mocked(joinRoomSession).mockResolvedValue({
       roomId: "room-9",
       playerId: "p-9",
@@ -355,7 +371,6 @@ describe("launcher layout integration", () => {
       retention: null,
     });
 
-    mountLauncher();
     const input = document.querySelector<HTMLInputElement>("#room-id-input");
     if (!input) {
       throw new Error("room input missing in test");
@@ -383,6 +398,19 @@ describe("launcher layout integration", () => {
         imageUrl: undefined,
         stateVersion: 4,
       }),
+    );
+
+    const joinFlattened = sink.mock.calls.flatMap(([events]) => events);
+    expect(
+      joinFlattened.map((event) => event.name),
+    ).toEqual(
+      expect.arrayContaining([
+        "welcome_viewed",
+        "display_detected",
+        "layout_loaded",
+        "room_joined",
+        "multiplayer_started",
+      ]),
     );
   });
 

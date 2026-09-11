@@ -167,7 +167,10 @@ export function mountLauncher(options?: {
       | "display_detected"
       | "layout_loaded"
       | "layout_saved"
-      | "solo_started",
+      | "solo_started"
+      | "room_created"
+      | "room_joined"
+      | "multiplayer_started",
     payload: Record<string, string | number | boolean> = {},
   ): void => {
     diagnostics?.track(name, payload);
@@ -463,6 +466,8 @@ export function mountLauncher(options?: {
       }
       updateRoomLabel(`Room ready: ${session.roomId}`);
       setStatus(`Room ${session.roomId} ready.`);
+      trackLauncherEvent("room_created", { mode: "multiplayer" });
+      trackLauncherEvent("multiplayer_started", { mode: "multiplayer" });
       await startGame({
         roomId: session.roomId,
         playerId: session.playerId,
@@ -512,6 +517,8 @@ export function mountLauncher(options?: {
       setUploadPresentation("veiled");
       updateRoomLabel(`Joined room: ${session.roomId}`);
       setStatus(`Joined ${session.roomId}.`);
+      trackLauncherEvent("room_joined", { mode: "multiplayer" });
+      trackLauncherEvent("multiplayer_started", { mode: "multiplayer" });
       await startGame({
         roomId: session.roomId,
         playerId: session.playerId,
