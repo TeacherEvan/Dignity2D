@@ -1,0 +1,11 @@
+{
+  "plan": "2026-09-12-bigfile-Dignity2D-GameScene.ts.md",
+  "verdict": "NEEDS-REVISION",
+  "ready_for_impl": false,
+  "gaps": [
+    "**OBJ-006 through OBJ-012 are 7 identical \"Hardening pass\" entries** with verbatim copy-paste text \u2014 pure template filler, contradicting the plan's own claim that objectives are \"derived from structural analysis, NOT a generic N-slice filler.\"",
+    "**No Definition of Done or security sections** \u2014 structural check confirms `has_dod=None`, `has_security=None`; the truncated plan never surfaces them.",
+    "**Structural check reports `objectives=0`** while the plan body lists 12 objectives \u2014 the gate and the artifact disagree on the most basic metric, so the check itself is unreliable."
+  ],
+  "reviewed_at": "2026-09-12T17:37:33.123115+07:00"
+}

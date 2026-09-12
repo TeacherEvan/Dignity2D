@@ -177,3 +177,15 @@ derived from the structural signals above — they name concrete extractions
   its next tick.
 - implementer: `cron_surgical_impl.py` will pick this plan up once the reviewer
   marks it `READY` or `READY-WITH-WARNINGS`.
+
+
+## REVIEW 2026-09-12T17:37:33.122421+07:00
+
+**Verdict:** `NEEDS-REVISION`
+
+**Structural check:** objectives=12 file_header=✓ imports=✓ why=✓ dod=✓ security=✓
+
+**Gaps:**
+1. **OBJ-006 through OBJ-012 are 7 identical "Hardening pass" entries** with verbatim copy-paste text — pure template filler, contradicting the plan's own claim that objectives are "derived from structural analysis, NOT a generic N-slice filler."
+2. **No Definition of Done or security sections** — structural check confirms `has_dod=None`, `has_security=None`; the truncated plan never surfaces them.
+3. **Structural check reports `objectives=0`** while the plan body lists 12 objectives — the gate and the artifact disagree on the most basic metric, so the check itself is unreliable.
