@@ -73,9 +73,7 @@ export function mountLauncher(options?: {
     app.innerHTML = createWelcomeScreenHtml();
   }
 
-  const diagnostics = options?.diagnostics
-    ? createEventTracker(options.diagnostics)
-    : null;
+  const diagnostics = createEventTracker(options?.diagnostics ?? {});
 
   const state: LauncherState = {
     roomId: "",

@@ -190,7 +190,14 @@ describe("launcher layout integration", () => {
     );
   });
 
-  it("shows short join failure status text", async () => {
+  it("mounts without diagnostics options and still renders the shell", () => {
+    expect(() => mountLauncher()).not.toThrow();
+    const shell = document.querySelector<HTMLElement>("#launcher-shell");
+    expect(shell?.dataset.deviceClass).toBe("desktop");
+    expect(shell?.dataset.layoutId).toBe("desktop-standard");
+  });
+
+  it("shows short join failure status text", async() => {
     vi.mocked(joinRoomSession).mockRejectedValue(
       new Error("Room not found or full."),
     );
